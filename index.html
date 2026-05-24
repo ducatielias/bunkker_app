@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Bunkker App</title>
+  
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body>
+
+  <header class="header-container">
+    <div class="search-wrapper">
+      <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input type="text" id="searchInput" class="search-input" placeholder="Buscar..." autocomplete="off" autocapitalize="off" spellcheck="false" />
+      <button class="search-clear" id="searchClear">✕</button>
+    </div>
+  </header>
+
+  <div id="searchOptions">
+    <div class="category-header" style="margin-top: 0;">
+      <h2 class="section-title">Buscar en...</h2>
+    </div>
+    <div class="ios-list" id="searchEnginesList"></div>
+  </div>
+
+  <div id="mainContent">
+    
+    <div class="category-header">
+      <div class="category-title-wrapper" onclick="toggleCategory('widget_aemet')">
+        <h2 class="section-title">Avisos AEMET</h2>
+        <span class="chevron" id="chev_widget_aemet">▼</span>
+      </div>
+    </div>
+    <div class="ios-card weather-widget" id="cat_widget_aemet">
+      <div id="avisos-lista" style="text-align: center; color: var(--text-secondary); font-size: 14px;">Cargando avisos...</div>
+      <div class="weather-footer">Provincia de Alicante · <a href="https://www.aemet.es" target="_blank" style="color:var(--blue-ios); text-decoration:none;">AEMET</a></div>
+    </div>
+
+    <div id="linksContainer"></div>
+
+    <div class="category-header">
+      <div class="category-title-wrapper" onclick="toggleCategory('ajustes')">
+        <h2 class="section-title">Ajustes</h2>
+        <span class="chevron" id="chev_ajustes">▼</span>
+      </div>
+    </div>
+    <div class="ios-card" id="cat_ajustes">
+      <button class="ios-btn" onclick="addCategory()">+ Añadir Nueva Categoría</button>
+      <button class="ios-btn" id="toggleEnginesBtn">🔍 Gestionar Buscadores</button>
+      <button class="ios-btn" id="toggleExportBtn">📦 Exportar / Importar Datos</button>
+      
+      <div id="enginesSection" style="display: none; margin-top: 15px; border-top: 1px solid #e5e5ea; padding-top: 15px;">
+        <h3 style="font-size: 16px; margin-bottom: 10px;">Mis Buscadores</h3>
+        <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 10px;">Desmarca la casilla para ocultarlo temporalmente. (Los buscadores secretos solo se muestran al activar el modo secreto).</p>
+        <div id="enginesEditorList" style="margin-bottom: 15px;"></div>
+        <button class="ios-btn" onclick="addSearchEngine()" style="background: var(--blue-ios); color: white;">+ Añadir Buscador</button>
+      </div>
+
+      <div id="exportSection" style="display: none; margin-top: 15px; border-top: 1px solid #e5e5ea; padding-top: 15px;">
+        <textarea id="dataTextarea" placeholder="Pega aquí el código JSON para importar..."></textarea>
+        <button class="ios-btn" id="exportBtn">⬇️ Generar código de mi configuración</button>
+        <button class="ios-btn" id="importBtn">⬆️ Sobrescribir con texto importado</button>
+        <p id="importStatus" style="font-size: 12px; color: var(--text-secondary); text-align: center;"></p>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+  <script src="pwa.js"></script>
+</body>
+</html>
