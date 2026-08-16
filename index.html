@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Bunkker App</title>
+  
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body class="app-shell">
+
+  <header class="header-container">
+    <div class="brand-row">
+      <div>
+        <p class="eyebrow">ACCESOS PERSONALES</p>
+        <h1>Bunkr</h1>
+      </div>
+      <span id="modeIndicator" class="mode-indicator" aria-live="polite">◉ Modo oculto</span>
+    </div>
+    <div class="search-wrapper">
+      <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input type="text" id="searchInput" class="search-input" placeholder="Buscar..." autocomplete="off" autocapitalize="off" spellcheck="false" />
+      <button class="search-clear" id="searchClear">✕</button>
+    </div>
+  </header>
+
+  <div id="searchOptions">
+    <div class="category-header search-options-heading">
+      <h2 class="section-title">Buscar en...</h2>
+    </div>
+    <div class="ios-list" id="searchEnginesList"></div>
+  </div>
+
+  <main id="mainContent">
+    
+    <div class="category-header">
+      <div class="category-title-wrapper" onclick="toggleCategory('widget_aemet')">
+        <h2 class="section-title">Avisos AEMET</h2>
+        <span class="chevron" id="chev_widget_aemet">▼</span>
+      </div>
+    </div>
+    <div class="ios-card weather-widget" id="cat_widget_aemet">
+      <div id="avisos-lista">Cargando avisos...</div>
+      <div class="weather-footer">Provincia de Alicante · <a href="https://www.aemet.es" target="_blank">AEMET</a></div>
+    </div>
+
+    <div id="linksContainer"></div>
+
+    <div class="category-header">
+      <div class="category-title-wrapper" onclick="toggleCategory('ajustes')">
+        <h2 class="section-title">Ajustes</h2>
+        <span class="chevron" id="chev_ajustes">▼</span>
+      </div>
+    </div>
+    <div class="ios-card settings-card" id="cat_ajustes">
+      <button class="ios-btn" id="toggleShortcutsBtn">🗂️ Gestionar accesos y categorías</button>
+      <button class="ios-btn" id="toggleExportBtn">📦 Exportar / Importar Datos</button>
+      
+      <div id="shortcutsSection" style="display: none;">
+        <h3 class="settings-heading">Categorías</h3>
+        <div id="categoryManagerList"></div>
+        <button class="ios-btn" id="addCategoryBtn">+ Añadir categoría</button>
+
+        <h3 class="settings-heading shortcuts-heading">Accesos directos</h3>
+        <div id="shortcutForm" style="display: none;">
+          <h4 id="shortcutFormTitle">Nuevo acceso</h4>
+          <input id="shortcutNameInput" class="shortcut-form-input" type="text" placeholder="Nombre de la web">
+          <input id="shortcutUrlInput" class="shortcut-form-input" type="url" placeholder="URL (https://...)">
+          <input id="shortcutSearchUrlInput" class="shortcut-form-input" type="url" placeholder="URL de búsqueda (https://...{q})">
+          <label class="shortcut-form-check"><input id="shortcutShowInSearchInput" type="checkbox"> Mostrar en la lista de búsquedas</label>
+          <select id="shortcutCategoryInput" class="shortcut-form-input"></select>
+          <button class="ios-btn primary-btn" id="saveShortcutBtn">Guardar acceso</button>
+          <button class="ios-btn" id="cancelShortcutBtn">Cancelar</button>
+        </div>
+        <div id="shortcutsEditorList"></div>
+        <button class="ios-btn primary-btn" id="addShortcutBtn">+ Añadir acceso</button>
+      </div>
+
+      <div id="exportSection" style="display: none;">
+        <textarea id="dataTextarea" placeholder="Pega aquí el código JSON para importar..."></textarea>
+        <button class="ios-btn" id="exportBtn">⬇️ Generar código de mi configuración</button>
+        <button class="ios-btn danger-btn" id="importBtn">⬆️ Sobrescribir con texto importado</button>
+        <p id="importStatus"></p>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+  <script src="pwa.js"></script>
+</body>
+</html>

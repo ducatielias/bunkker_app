@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title id="page-title">⚠️ Avisos Meteorológicos - Alicante</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap');
+
+    body {
+      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      color: #1d1d1f;
+      margin: 0;
+      padding: 12px;
+      font-size: 17px;
+      line-height: 1.4;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    .encabezado-expandible {
+      text-align: center;
+      padding: 20px 16px;
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      color: #1d1d1f;
+      border-radius: 18px;
+      margin-bottom: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.3s ease;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .encabezado-expandible:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+    }
+    .titulo-principal {
+      font-size: 1.2em;
+      margin: 0 0 4px 0;
+      font-weight: 600;
+    }
+    .provincia {
+      font-size: 17px;
+      margin: 0 0 8px 0;
+      font-weight: 400;
+      opacity: 0.8;
+    }
+    .contador-avisos {
+      background: rgba(0, 122, 255, 0.1);
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 16px;
+      font-size: 15px;
+      font-weight: 500;
+      color: #007aff;
+      border: 1px solid rgba(0, 122, 255, 0.2);
+			margin: 0 0 15px 0;
+    }
+
+    .contenedor-boton {
+      width: 100%;
+      max-width: 100%;
+      margin: 0 auto 16px;
+      border-radius: 18px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      color: #1d1d1f;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.3s ease;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .contenedor-boton:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-comun {
+      display: block;
+      width: 100%;
+      padding: 14px 18px;
+      text-decoration: none;
+      font-weight: 500;
+      text-align: left;
+      font-size: 17px;
+      color: #000000 !important;
+      word-wrap: break-word;
+      hyphens: auto;
+      line-height: 1.3;
+    }
+    .btn-aemet {
+      background-color: rgba(0, 122, 255, 0.1) !important;
+      color: #007aff !important;
+      border: 1px solid rgba(0, 122, 255, 0.3) !important;
+      margin: 16px auto 0 auto;
+      width: auto;
+      min-width: 180px;
+      padding: 12px 20px;
+      border-radius: 12px;
+			text-align: center;
+    }
+    .btn-aemet:hover {
+      background-color: rgba(0, 122, 255, 0.2) !important;
+      color: #0051d5 !important;
+    }
+
+    .avisos-container {
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      overflow: hidden;
+      transition: all 0.4s ease;
+      display: block;
+      margin-bottom: 16px;
+    }
+
+    .avisos-container.collapsed {
+      max-height: 0 !important;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+      margin: 0 !important;
+      border: none !important;
+      box-shadow: none !important;
+      opacity: 0;
+      transform: scale(0.98);
+    }
+
+    .aviso {
+      padding: 16px 0;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      text-align: left;
+      transition: all 0.2s ease;
+    }
+    .aviso:hover {
+      background: rgba(0, 122, 255, 0.05);
+      border-radius: 12px;
+      padding: 16px;
+      margin: 0 -16px;
+    }
+    .aviso:last-child {
+      border-bottom: none;
+    }
+    .aviso-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .aviso-icon {
+      font-size: 20px;
+      line-height: 1;
+      flex-shrink: 0;
+      width: 24px;
+    }
+    .aviso-titulo {
+      font-size: 17px;
+      margin: 0;
+      font-weight: 600;
+      color: #1d1d1f;
+      letter-spacing: -0.01em;
+    }
+    .nivel-rojo { color: #ff3b30; }
+    .nivel-naranja { color: #ff9500; }
+    .nivel-amarillo { color: #ffcc00; }
+    .aviso-fecha {
+      background: rgba(0, 122, 255, 0.1);
+      padding: 6px 12px;
+      border-radius: 10px;
+      font-size: 15px;
+      color: #007aff;
+      margin: 4px 0;
+      font-weight: 500;
+      display: block;
+    }
+    .aviso-resumen {
+      font-size: 15px;
+      color: #86868b;
+      margin: 8px 0 0 0;
+      line-height: 1.5;
+      font-weight: 400;
+    }
+
+    .seccion-aemet {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(0, 0, 0, 0.05);
+      text-align: center;
+    }
+    .seccion-aemet p {
+      margin: 4px 0;
+      font-size: 15px;
+      color: #86868b;
+      font-weight: 400;
+    }
+
+    .cargando {
+      text-align: center;
+      padding: 24px;
+      color: #86868b;
+      font-size: 17px;
+    }
+
+    #backToTop {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      transition: all 0.3s ease;
+      z-index: 1000;
+      color: #1d1d1f;
+    }
+    #backToTop:hover {
+      background: rgba(255, 255, 255, 1);
+      transform: scale(1.1);
+    }
+    #backToTop.show {
+      display: flex;
+    }
+
+    /* Estilo para los iconos de web */
+    .web-icon {
+      width: 20px;
+      height: 20px;
+      vertical-align: middle;
+      margin-right: 8px;
+      display: inline-block;
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 8px;
+      }
+      .encabezado-expandible {
+        padding: 16px 12px;
+        border-radius: 16px;
+      }
+      .btn-comun {
+        font-size: 14px;
+        padding: 12px 12px;
+        line-height: 1.2;
+        word-wrap: break-word;
+        hyphens: auto;
+      }
+      .btn-aemet {
+        min-width: auto;
+        width: auto;
+      }
+      .aviso:hover {
+        margin: 0 -8px;
+        padding: 16px;
+      }
+      #backToTop {
+        bottom: 16px;
+        right: 16px;
+        width: 44px;
+        height: 44px;
+        font-size: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+		<!-- Widget avamet display: flex; -->
+		<div class="contenedor-boton" style="display: none; justify-content: center; align-items: center; height: 255px !important;overflow: hidden;">
+			<iframe 
+				src="https://www.avamet.org/widgets/widget-l.php?codi=c32m132e01&size=161&idioma=es" 
+				style="width: 300px !important; height: 250px !important; border: none !important; display: block;"
+				loading="lazy">
+			</iframe>
+		</div>
+
+	<!-- Widget ventusky -->
+	 <div class="contenedor-boton">
+		<!--<div style="display:block!important;position:relative!important;max-width:161.616vh!important;margin:auto!important;padding:0!important;border:0!important">
+		<div style="display:block!important;position:relative!important;width:100%!important;height:0!important;box-sizing:content-box!important;margin:0!important;border:0!important;padding:0 0 61.875%!important;left:0!important;top:0!important;right:0!important;bottom:0!important">-->
+		<!--<iframe src="https://embed.ventusky.com/?p=38.572;-0.417;10&l=temperature-2m" style="display:block!important;position:absolute!important;left:0!important;top:0!important;width:100%!important;height:100%!important;margin:0!important;padding:0!important;border:0!important;right:auto!important;bottom:auto!important" loading="lazy"></iframe>-->
+		<iframe src="https://embed.ventusky.com/?p=38.566;-0.435;9&l=radar" style="display:block!important;position:relative!important;left:0!important;top:0!important;width:100%!important;height:250px!important;margin:0!important;padding:0!important;border:0!important;right:auto!important;bottom:auto!important" loading="lazy"></iframe>
+		<!--</div>
+		</div>-->
+	</div>
+
+	<!-- Botón Avisos -->
+  <div id="toggle-encabezado" class="encabezado-expandible" role="button" aria-expanded="false">
+    <h1 class="titulo-principal">⚠️ Avisos Meteorológicos Oficiales</h1>
+    <div class="provincia">Provincia de Alicante · AEMET</div>
+    <div id="contador-avisos" class="contador-avisos">Cargando...</div>
+		
+			<!-- Botón aemet -->
+			<div class="contenedor-boton">
+				<a href="http://www.aemet.es/es/eltiempo/prediccion/municipios/torremanzanas-torre-de-les-macanes-la-id03132"
+					 target="_blank"
+					 class="btn-comun btn-dgt">
+					AEMET
+				</a>
+			</div>
+	
+  </div>
+
+  <div id="avisos-container" class="avisos-container collapsed">
+    <div id="avisos-lista" class="cargando">Cargando avisos...</div>
+    <div class="seccion-aemet">
+      <p>Datos oficiales de <a href="https://www.aemet.es" target="_blank" style="color: #007aff; text-decoration: none;">AEMET</a></p>
+      <a href="https://www.aemet.es/es/eltiempo/prediccion/avisos?area=03" target="_blank" class="btn-comun btn-aemet">
+        Ver en AEMET
+      </a>
+    </div>
+  </div>
+	
+  <!-- Botón DGT -->
+  <div class="contenedor-boton">
+    <a href="https://infocar.dgt.es/etraffic/Incidencias?ca=10&provIci=3&caracter=acontecimiento&accion_consultar=Consultar&IncidenciasRETENCION=IncidenciasRETENCION&IncidenciasPUERTOS=IncidenciasPUERTOS&IncidenciasMETEOROLOGICA=IncidenciasMETEOROLOGICA&IncidenciasEVENTOS=IncidenciasEVENTOS&IncidenciasOTROS=IncidenciasOTROS&IncidenciasRESTRICCIONES=IncidenciasRESTRICCIONES&ordenacion=fechahora_ini-DESC"
+       target="_blank"
+       class="btn-comun btn-dgt">
+      🚗 Incidencias de tráfico (DGT)
+    </a>
+  </div>
+	
+  <!-- Botón Windy -->
+  <div class="contenedor-boton">
+    <a href="https://www.windy.com/"
+       target="_blank"
+       class="btn-comun btn-dgt">
+      🌩️ Windy App
+    </a>
+  </div>
+	
+	<!-- Botón Weather Cloud -->
+  <div class="contenedor-boton">
+    <a href="https://app.weathercloud.net/map#"
+       target="_blank"
+       class="btn-comun btn-dgt">
+      Weather Cloud
+    </a>
+  </div>
+	
+	<!-- Botón Meteored-->
+  <div class="contenedor-boton">
+    <a href="https://www.meteored.com/es/"
+       target="_blank"
+       class="btn-comun btn-dgt">
+      Meteored
+    </a>
+  </div>
+	
+	<!-- ✅ Encabezado expandible al final -->
+	<div id="toggle-info-extra" class="encabezado-expandible" role="button" aria-expanded="false">
+		<h1 class="titulo-principal">ℹ️ Información adicional</h1>
+		<div class="provincia">Enlaces y recursos útiles</div>
+	</div>
+
+	<div id="info-extra-container" class="avisos-container collapsed">
+		<div style="padding: 16px 0;">
+		
+			<!-- Botón Avamet -->
+			<div class="contenedor-boton">
+				<a href="https://www.avamet.org/mxo-i.php?id=c32m132e01"
+					 target="_blank"
+					 class="btn-comun btn-dgt">
+					Avamet
+				</a>
+			</div>
+			
+			<!-- Botón Rain Alarm-->
+			<div class="contenedor-boton">
+				<a href="https://www.rain-alarm.com/"
+					 target="_blank"
+					 class="btn-comun btn-dgt">
+					Rain Alarm
+				</a>
+			</div>
+			
+			<!-- Botón Unwx Alarm-->
+			<div class="contenedor-boton">
+				<a href="https://www.unwx.app/pwa/"
+					 target="_blank"
+					 class="btn-comun btn-dgt">
+					Unwx Alarm
+				</a>
+			</div>
+			
+			<!-- Botón Wunderground -->
+			<div class="contenedor-boton">
+				<a href="https://www.wunderground.com/wundermap"
+					 target="_blank"
+					 class="btn-comun btn-dgt">
+					Wunderground
+				</a>
+			</div>
+			
+			<!-- Botón GVA112 -->
+			<div class="contenedor-boton">
+				<a href="https://www.112cv.gva.es/es/preemergencias-meteorologicas"
+					 target="_blank"
+					 class="btn-comun btn-dgt">
+					GVA 112 
+				</a>
+			</div>
+			
+			<!-- Botón Actividad Sísmica -->
+			<div class="contenedor-boton">
+				<a href="https://visualizadores.ign.es/tproximos"
+					 target="_blank"
+					 class="btn-comun btn-dgt">
+					Actividad Sísmica
+				</a>
+			</div>
+		
+			<!--<p style="margin: 8px 0; font-size: 16px;">
+				<a href="https://www.aemet.es/es/nota_legal" target="_blank" style="color: #007aff; text-decoration: none;">Nota legal de AEMET</a>
+			</p>
+			<p style="margin: 8px 0; font-size: 16px;">
+				<a href="https://sede.dgt.gob.es/es/informacion/utilidades.shtml" target="_blank" style="color: #007aff; text-decoration: none;">Utilidades de la DGT</a>
+			</p>
+			<p style="margin: 8px 0; font-size: 16px;">
+				<a href="https://www.windy.com/help" target="_blank" style="color: #007aff; text-decoration: none;">Ayuda de Windy</a>
+			</p>-->
+			<p style="margin-top: 16px; font-size: 14px; color: #86868b;">
+				Esta sección incluye enlaces de interés relacionados con la meteorología y la movilidad.
+			</p>
+		</div>
+	</div>
+
+	<!-- Botón Google News -->
+  <div class="contenedor-boton">
+    <a href="https://news.google.com/home?hl=es&gl=ES&ceid=ES:es"
+       target="_blank"
+       class="btn-comun btn-dgt">
+      Google News
+    </a>
+  </div>
+	
+	<!-- Botón AmbuStock -->
+  <div class="contenedor-boton">
+    <a href="go:ambustock"
+       target="_blank"
+       class="btn-comun btn-dgt">
+      AmbuStock
+    </a>
+  </div>
+	
+  <footer></footer>
+
+  <button id="backToTop" title="Volver arriba">↑</button>
+
+  <script>
+    // --- Toggle de avisos ---
+    const encabezado = document.getElementById('toggle-encabezado');
+    const container = document.getElementById('avisos-container');
+		const botonAemet = encabezado.querySelector('.contenedor-boton'); // o el <a> directamente
+
+		// Evitar que el clic en el botón active el toggle
+		botonAemet.addEventListener('click', (e) => {
+			e.stopPropagation(); // ¡esto es clave!
+		});
+		
+		// Toggle normal en el encabezado
+    encabezado.addEventListener('click', () => {
+      const isCollapsed = container.classList.contains('collapsed');
+      container.classList.toggle('collapsed', !isCollapsed);
+      encabezado.setAttribute('aria-expanded', isCollapsed ? 'true' : 'false');
+    });
+
+    // --- Carga de avisos meteorológicos ---
+    const feedUrl = 'https://www.aemet.es/documentos_d/eltiempo/prediccion/avisos/rss/CAP_AFAP7703_ATOM.xml';
+    const apiUrl = 'https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(feedUrl.trim());
+
+    function limpiarTitulo(title) {
+      let clean = title.replace(/^Aviso\.\s*/, '');
+      clean = clean.replace(/^Nivel\s+(rojo|naranja|amarillo)\.\s*/i, '');
+      return clean;
+    }
+
+    function getIcon(title) {
+      if (title.includes('Tormentas')) return '⛈️';
+      if (title.includes('Lluvias')) return '🌧️';
+      return '⚠️';
+    }
+
+    function getLevelClass(originalTitle) {
+      if (originalTitle.includes('Nivel rojo')) return 'nivel-rojo';
+      if (originalTitle.includes('Nivel naranja')) return 'nivel-naranja';
+      if (originalTitle.includes('Nivel amarillo')) return 'nivel-amarillo';
+      return '';
+    }
+
+    function parseStartDate(summary) {
+      const regex = /de\s+(\d{2}:\d{2})\s+(\d{2})-(\d{2})-(\d{4})/;
+      const match = summary.match(regex);
+      if (match) {
+        const [, hour, day, month, year] = match;
+        return new Date(`${year}-${month}-${day}T${hour}:00`);
+      }
+      return null;
+    }
+
+    function extractTimeParts(summary) {
+      const regex = /de\s+(\d{2}:\d{2})\s+(\d{2})-(\d{2})-(\d{4})[^a]*a\s+(\d{2}:\d{2})\s+(\d{2})-(\d{2})-(\d{4})/;
+      const match = summary.match(regex);
+      if (match) {
+        const [, h1, d1, m1, y1, h2, d2, m2, y2] = match;
+        const inicio = `De ${h1} del ${d1}/${m1}/${y1}`;
+        const fin = `a ${h2} del ${d2}/${m2}/${y2}`;
+        return { inicio, fin };
+      }
+      return null;
+    }
+
+    function extractPhenomenon(summary) {
+      return summary.split(' de nivel ')[0] + '.';
+    }
+
+    const pageTitleEl = document.getElementById('page-title');
+    const contadorEl = document.getElementById('contador-avisos');
+
+    fetch(apiUrl)
+      .then(response => response.json())
+      .then(data => {
+        if (data.status !== 'ok') throw new Error('Error en la API');
+
+        let items = data.items.filter(item =>
+          !item.title.includes('Estado completo')
+        );
+
+        const nivelOrden = { 'rojo': 3, 'naranja': 2, 'amarillo': 1 };
+        items.sort((a, b) => {
+          const nivelA = a.title.match(/Nivel (rojo|naranja|amarillo)/i)?.[1]?.toLowerCase() || 'amarillo';
+          const nivelB = b.title.match(/Nivel (rojo|naranja|amarillo)/i)?.[1]?.toLowerCase() || 'amarillo';
+          const ordenA = nivelOrden[nivelA] || 1;
+          const ordenB = nivelOrden[nivelB] || 1;
+          if (ordenB !== ordenA) return ordenB - ordenA;
+
+          const dateA = parseStartDate(a.description || a.content || '');
+          const dateB = parseStartDate(b.description || b.content || '');
+          if (!dateA && !dateB) return 0;
+          if (!dateA) return 1;
+          if (!dateB) return -1;
+          return dateA - dateB;
+        });
+
+        const containerList = document.getElementById('avisos-lista');
+        const count = items.length;
+
+        pageTitleEl.textContent = `⚠️ Avisos Meteorológicos - Alicante (${count} aviso${count !== 1 ? 's' : ''})`;
+
+        if (count === 0) {
+          contadorEl.textContent = '0 avisos activos';
+          containerList.innerHTML = '<p style="text-align:center;">✅ No hay avisos activos en este momento.</p>';
+          return;
+        }
+
+        contadorEl.textContent = `${count} aviso${count !== 1 ? 's' : ''} activo${count !== 1 ? 's' : ''}`;
+        contadorEl.style.background = 'rgba(0, 122, 255, 0.15)';
+
+        let html = '';
+        items.forEach(item => {
+          const originalTitle = item.title;
+          const cleanTitle = limpiarTitulo(originalTitle);
+          const summary = item.description || item.content || '';
+
+          const icon = getIcon(cleanTitle);
+          const levelClass = getLevelClass(originalTitle);
+          const timeParts = extractTimeParts(summary);
+          const phenomenon = extractPhenomenon(summary);
+
+          html += `
+            <div class="aviso">
+              <div class="aviso-header">
+                <div class="aviso-icon">${icon}</div>
+                <h3 class="aviso-titulo ${levelClass}">${cleanTitle}</h3>
+              </div>
+              ${timeParts ? `
+                <div class="aviso-fecha">▶️ ${timeParts.inicio}</div>
+                <div class="aviso-fecha">🔚 ${timeParts.fin}</div>
+              ` : ''}
+              <p class="aviso-resumen">${phenomenon}</p>
+            </div>
+          `;
+        });
+
+        containerList.innerHTML = html;
+      })
+      .catch(err => {
+        console.error('Error:', err);
+        document.getElementById('avisos-lista').innerHTML =
+          '<p style="color:#ff3b30; text-align:center;">❌ No se pudieron cargar los avisos.<br>Visita AEMET directamente.</p>';
+        contadorEl.textContent = 'Error al cargar';
+        contadorEl.style.color = '#ff3b30';
+        pageTitleEl.textContent = '⚠️ Avisos Meteorológicos - Alicante (error)';
+      });
+
+    // --- Botón "Volver arriba" ---
+    const backToTopButton = document.getElementById('backToTop');
+    window.addEventListener('scroll', () => {
+      if (window.pageYOffset > 100) {
+        backToTopButton.classList.add('show');
+      } else {
+        backToTopButton.classList.remove('show');
+      }
+    });
+    backToTopButton.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    // --- ✨ Reemplazo automático de emojis por favicons ---
+    function getDomain(url) {
+      try {
+        const urlObj = new URL(url.trim());
+        return urlObj.hostname;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // Ejecutar tras cargar el DOM
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.btn-comun').forEach(link => {
+        const href = link.getAttribute('href');
+        if (!href) return;
+
+        const domain = getDomain(href);
+        if (!domain) return;
+
+        // Crear favicon
+        const favicon = document.createElement('img');
+        favicon.src = `https://www.google.com/s2/favicons?domain=${domain}&sz=24`;
+        favicon.alt = domain;
+        favicon.className = 'web-icon';
+
+        // Insertar al inicio del enlace
+        const firstTextNode = Array.from(link.childNodes).find(node => node.nodeType === Node.TEXT_NODE);
+        if (firstTextNode) {
+          link.insertBefore(favicon, firstTextNode);
+          // Opcional: eliminar el emoji inicial si existe (muy básico)
+          const text = firstTextNode.nodeValue || '';
+          if (text.trim().startsWith('🚗') || text.trim().startsWith('🌩️') || text.trim().startsWith('⚠️')) {
+            firstTextNode.nodeValue = text.replace(/^[\uD83C-\uDBFF\uDC00-\uDFFF\s]+/, '').trim();
+          }
+        } else {
+          link.prepend(favicon);
+        }
+      });
+    });
+		
+		// --- Toggle de información adicional ---
+			const infoExtraHeader = document.getElementById('toggle-info-extra');
+			const infoExtraContainer = document.getElementById('info-extra-container');
+
+			if (infoExtraHeader && infoExtraContainer) {
+				infoExtraHeader.addEventListener('click', () => {
+					const isCollapsed = infoExtraContainer.classList.contains('collapsed');
+					infoExtraContainer.classList.toggle('collapsed', !isCollapsed);
+					infoExtraHeader.setAttribute('aria-expanded', isCollapsed ? 'true' : 'false');
+				});
+			}
+  </script>
+</body>
+</html>

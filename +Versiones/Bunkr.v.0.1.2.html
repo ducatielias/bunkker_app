@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Bunkr Searcher</title>
+  
+  <style>
+    /* === Reset & Base === */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #f9fafb;
+      color: #374151;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    main {
+      max-width: 768px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1.25rem 1rem;
+    }
+
+    /* === Search Box === */
+    .search-box {
+      background-color: white;
+      border-radius: 0.75rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+      padding: 1.25rem 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .search-box h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #ef4444;
+      margin: 0 0 0.25rem;
+    }
+
+    .search-box p {
+      font-size: 0.9375rem;
+      color: #4b5563;
+      margin: 0 0 1rem;
+    }
+
+    /* === Search Input === */
+    .search-input-wrapper {
+      position: relative;
+      width: 100%;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 0.75rem 2.75rem 0.75rem 1rem;
+      font-size: 1rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.5rem;
+      outline: none;
+      background-color: white;
+      transition: all 0.2s ease;
+    }
+
+    .search-input:focus {
+      border-color: #ef4444;
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+    }
+
+    /* === Search Input - Boton buscar === */
+    .search-button-inline {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #6b7280;
+      cursor: pointer;
+      padding: 0.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+    }
+
+    .search-button-inline:hover {
+      color: #ef4444;
+    }
+
+    .search-button-inline svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    
+    /* === Search Input - Boton x === */
+    .clear-button {
+      position: absolute;
+      right: 2.75rem; /* justo a la izquierda del search-button-inline */
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #9ca3af;
+      cursor: pointer;
+      font-size: 1.25rem;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.15s ease, color 0.15s ease;
+    }
+
+    .clear-button.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .clear-button:hover {
+      color: #ef4444;
+    }
+
+    /* === Search Options: SINGLE COLUMN ONLY === */
+    #searchOptions {
+      display: none;
+      margin-top: 1rem;
+    }
+
+    #searchOptions.show {
+      display: block;
+    }
+
+    /* === Sections & Titles === */
+    .search-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .section-title {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: #4b5563;
+      margin: 0 0 0.75rem;
+      padding-bottom: 0.25rem;
+      border-bottom: 1px solid #e5e7eb;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* === Buttons: One per row, full width === */
+    .search-option {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      background-color: white;
+      border: 1px solid #e5e7eb;
+      color: #374151;
+      font-size: 0.9375rem;
+      padding: 0.875rem 1rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s ease;
+      margin-bottom: 0.5rem;
+    }
+
+    .search-option:last-child {
+      margin-bottom: 0;
+    }
+
+    .search-option:hover {
+      border-color: #ef4444;
+      color: #ef4444;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .icon-placeholder {
+      flex-shrink: 0;
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      margin-right: 0.75rem;
+    }
+
+    .icon-placeholder img,
+    .icon-placeholder svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* === Mobile scroll === */
+    @media (max-width: 767px) {
+      html {
+        scroll-behavior: auto;
+      }
+    }
+  </style>
+
+  </head>
+  
+<body>
+  <main>
+    <section>
+      <div class="search-box">
+        <h1>Bunkr Searcher</h1>
+        <p>Find what you're looking for on Bunkr</p>
+
+        <form id="searchForm" class="search-form">
+          <div class="search-input-wrapper">
+            <input
+              type="text"
+              id="searchInput"
+              placeholder="Search..."
+              class="search-input"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+              required
+            />
+            <button type="button" class="clear-button" aria-label="Clear search" id="clearButton">×</button>
+            <button type="submit" class="search-button-inline" aria-label="Search">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            </button>
+          </div>
+        </form>
+
+        <div id="searchOptions">
+          <!-- 
+          🔹 1. Favicon estándar: /favicon.ico (método clásico, pero inestable)
+          https://example.com/favicon.ico // https://${domain}/favicon.ico (https://yandex.com/favicon.ico)
+          ----
+          🔹 2. Google Shared Favicon (rápido y universal)
+          https://www.google.com/s2/favicons?domain=example.com&sz=32 (https://www.google.com/s2/favicons?domain=bing.com&sz=32)
+          ----
+          🔹 3. Simple Icons (recomendado para tu caso)
+          https://simpleicons.org/
+          --->
+          
+          <!-- Sección: Motores de búsqueda -->
+          <div class="search-section">
+            <h3 class="section-title">🔍 Motores de búsqueda</h3>
+            <button class="search-option" data-site="yandex">
+              <img class="icon-placeholder" src="https://yandex.com/favicon.ico" width="32" height="32">
+              <span>Yandex</span>
+            </button>
+            <button class="search-option" data-site="google">
+              <img class="icon-placeholder" src="https://www.google.com/favicon.ico" width="32" height="32">
+              <span>Google</span>
+            </button>
+            <button class="search-option" data-site="bing">
+              <img class="icon-placeholder" src="https://www.google.com/s2/favicons?domain=bing.com&sz=32" width="32" height="32">
+              <span>Bing</span>
+            </button>
+          </div>
+
+          <!-- Sección: Redes sociales -->
+          <div class="search-section">
+            <h3 class="section-title">📱 Redes sociales</h3>
+            <button class="search-option" data-site="vk">
+              <img class="icon-placeholder" src="https://vk.com/favicon.ico" width="32" height="32">
+              <span>VK</span>
+            </button>
+            <button class="search-option" data-site="telegram">
+              <img class="icon-placeholder" src="https://tgsearch.su/favicon.ico" width="32" height="32">
+              <span>Telegram Tgs</span>
+            </button>
+            <button class="search-option" data-site="telegramchannel">
+              <img class="icon-placeholder" src="https://tgsearch.su/favicon.ico" width="32" height="32">
+              <span>Telegram Channel</span>
+            </button>
+          </div>
+          
+          <!-- Sección: Datos / Hosting -->
+          <div class="search-section">
+            <h3 class="section-title">📁 DATOS</h3>
+            <button class="search-option" data-site="bunkr">
+              <img class="icon-placeholder" src="https://bunkr-albums.io/favicon.ico" width="32" height="32">
+              <span>Bunkr Albums</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      
+    </section>
+  </main>
+  
+  <!-- // === Lógica boton x === // -->
+  <script>
+    const clearButton = document.getElementById('clearButton');
+
+    // Mostrar/ocultar el botón × según el contenido
+    searchInput.addEventListener('input', () => {
+      const hasText = searchInput.value.trim() !== '';
+      clearButton.classList.toggle('visible', hasText);
+      // Opcional: ocultar opciones si se vacía el input manualmente
+      if (!hasText) {
+        searchOptions.classList.remove('show');
+      }
+    });
+
+    // Funcionalidad del botón ×
+    clearButton.addEventListener('click', () => {
+      searchInput.value = '';
+      searchInput.focus();
+      searchOptions.classList.remove('show');
+      clearButton.classList.remove('visible');
+    });
+     
+  </script>
+  
+  <!-- // === Click en botones searchOptions === // -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const searchForm = document.getElementById('searchForm');
+      const searchInput = document.getElementById('searchInput');
+      const searchOptions = document.getElementById('searchOptions');
+
+      let currentQuery = '';
+
+      // === Submit del formulario ===
+      searchForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        currentQuery = searchInput.value.trim();
+        if (!currentQuery) return;
+
+        searchOptions.classList.add('show');
+
+        const behavior = window.matchMedia('(hover: hover)').matches ? 'smooth' : 'auto';
+        searchOptions.scrollIntoView({ behavior, block: 'start' });
+
+      });
+
+      // === Delegación de eventos para los botones ===
+      searchOptions.addEventListener('click', (e) => {
+        const button = e.target.closest('.search-option');
+        if (!button) return;
+
+        const site = button.dataset.site;
+        const q = encodeURIComponent(currentQuery);
+        let url = '';
+
+        switch (site) {
+          case 'bunkr':
+            url = `https://bunkr-albums.io/?search=${q}`;
+            break;
+          case 'yandex':
+            url = `https://yandex.com/search/?text=${q}`;
+            break;
+          case 'google':
+            url = `https://www.google.com/search?q=${q}`;
+            break;
+          case 'bing':
+            url = `https://www.bing.com/search?q=${q}`;
+            break;
+          case 'vk':
+            url = `https://vk.com/search?q=${q}`;
+            break;
+          case 'telegram':
+            url = `https://tgsearch.su/?post_type=tg_channel&s=${q}`;
+            break;
+          case 'telegramchannel':
+            url = `https://telegramchannels.me/search?search=${q}&type=all`;
+            break;
+          
+          default:
+            return;
+        }
+
+        if (url) {
+          window.open(url, '_blank', 'noopener,noreferrer');
+        }
+      });
+    });
+  </script>
+  
+</body>
+</html>

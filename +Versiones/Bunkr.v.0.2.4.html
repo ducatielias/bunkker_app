@@ -1,0 +1,1530 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contenido Asociado a Menú</title>
+  <style>
+    /* === Reset & Base === */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: sans-serif;
+    }
+    
+    /* Elimina el recuadro azul/resaltado al tocar en dispositivos móviles */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Opcional: eliminar contorno de foco en elementos interactivos (si no necesitas accesibilidad visual explícita) */
+button,
+a,
+input,
+select,
+textarea,
+[tabindex] {
+  outline: none !important;
+  /* o más sutilmente, solo en :focus-visible para mantener accesibilidad */
+}
+
+/* Recomendado: mantener foco visible solo cuando sea necesario (teclado) */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+    /* === Top Bar - Barra superior === */
+    .top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 60px;
+      background-color: #333;
+      color: white;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      z-index: 1000;
+    }
+
+    .menu-btn {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      margin-right: 16px;
+    }
+
+    .top-bar h1 {
+      font-size: 1.2rem;
+    }
+
+    /* === Menu Lateral === */
+    .overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+    }
+
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: -280px;
+      width: 280px;
+      height: 100vh;
+      background-color: #222;
+      color: white;
+      transition: left 0.3s ease;
+      z-index: 1001;
+      overflow: hidden;
+    }
+
+    .sidebar.open {
+      left: 0;
+    }
+
+    .sidebar-content {
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .sidebar-header {
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 0 16px;
+      background-color: #111;
+      border-bottom: 1px solid #444;
+    }
+
+    .sidebar-header button {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .menu-item {
+      width: 100%;
+      background: transparent;
+      border: none;
+      color: white;
+      text-align: left;
+      font-size: 1rem;
+      cursor: pointer;
+      border-bottom: 1px solid #444;
+      padding: 14px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .menu-item:hover {
+      background-color: #444;
+    }
+
+    .menu-item .arrow {
+      transition: transform 0.25s ease;
+      font-size: 14px;
+    }
+
+    .menu-item.expanded .arrow {
+      transform: rotate(90deg);
+    }
+
+    .submenu {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+      background-color: #2a2a2a;
+    }
+
+    .submenu.open {
+      max-height: 500px;
+    }
+
+    .submenu button {
+      display: block;
+      width: 100%;
+      padding: 12px 40px;
+      background: transparent;
+      border: none;
+      color: #ccc;
+      text-align: left;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+
+    .submenu button:hover {
+      background-color: #3a3a3a;
+      color: white;
+    }
+
+    /* === Contenido principal === */
+    .main-content {
+      margin-top: 60px;
+      padding: 20px;
+      min-height: calc(100vh - 60px);
+    }
+
+    .content-section {
+      display: none;
+    }
+
+    .content-section.active {
+      display: block;
+    }
+
+    .section-title {
+      font-size: 1.2rem;
+      font-weight: 500;
+      margin-bottom: 16px;
+      color: #333;
+      
+      cursor: none;
+      user-select: none;
+    }
+
+    .section-content {
+      line-height: 1.6;
+      color: #555;
+    }
+
+    @media (max-width: 480px) {
+      .top-bar, .sidebar-header { height: 56px; }
+      .sidebar { width: 240px; }
+      .main-content { padding: 16px; }
+    }
+    
+    
+  </style>
+
+  <style>
+    /* === Estilos Meteorológicos (adaptados a tu estilo) === */
+    /* Eliminamos backdrop-filter y fuentes específicas para cumplir con preferencias */
+
+    .encabezado-expandible {
+      text-align: left;
+      padding: 10px 10px;/*padding: 1.25rem;*/
+      background: white;
+      color: #374151;
+      border-radius: 0.75rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.3s ease;
+      border: 1px solid #e5e7eb;
+    }
+
+    .encabezado-expandible:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .titulo-principal {
+      font-size: 1.25rem;
+      font-weight: 600;
+      /*margin: 0 0 .25rem;*/
+    }
+
+    .provincia {
+      font-size: 0.9375rem;
+      color: #6b7280;
+      /*margin: 0 0 .5rem;*/
+    }
+
+    .contador-avisos {
+      background: rgba(239, 68, 68, 0.1);
+      display: inline-block;
+      padding: 0.375rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #ff0202;
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      margin: 0 0 0.75rem;
+    }
+
+    .contenedor-boton {
+      background: white;
+      border-radius: 0.75rem;
+      overflow: hidden;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+      margin-bottom: 1rem;
+      border: 1px solid #e5e7eb;
+    }
+
+    .contenedor-boton:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-comun {
+      display: block;
+      width: 100%;
+      /*padding: 0.875rem 1rem;*/
+      text-decoration: none;
+      font-weight: 500;
+      text-align: left;
+      font-size: 1rem;
+      color: #111827;
+      line-height: 0;
+      transition: background 0.15s;
+      
+      padding: 10px 10px;
+      display: inline-block;
+    }
+
+    .btn-comun:hover {
+      background: #f3f4f6;
+    }
+
+    /*.btn-aemet {
+      background: rgba(0, 122, 255, 0.1);
+      color: #007aff !important;
+      border: 1px solid rgba(0, 122, 255, 0.3);
+      margin: 1rem auto 0;
+      width: auto;
+      min-width: 180px;
+      padding: 0.75rem 1.25rem;
+      border-radius: 0.75rem;
+      text-align: center;
+    }
+
+    .btn-aemet:hover {
+      background: rgba(0, 122, 255, 0.15);
+    }*/
+
+    
+    .avisos-container {
+      background: #ffffff;
+      border-radius: 0.75rem;
+      padding: 1rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+      border: 1px solid #e5e7eb;
+      transition: all 0.4s ease;
+      margin-bottom: 1rem;
+    }
+
+    .avisos-container.collapsed {
+      max-height: 0 !important;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+      margin: 0 !important;
+      border: none !important;
+      box-shadow: none !important;
+      opacity: 0;
+      transform: scale(0.98);
+      overflow: hidden;
+    }
+    
+    /*.avisos-container {
+      background: white;
+      border-radius: 0.75rem;
+      padding: 1rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+      border: 1px solid #e5e7eb;
+      transition: all 0.3s ease;
+      margin-top: 1rem;
+    }*/
+
+    .aviso {
+      padding: 1rem 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .aviso:last-child {
+      border-bottom: none;
+    }
+
+    .aviso-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .aviso-icon {
+      font-size: 1.25rem;
+      flex-shrink: 0;
+      width: 1.5rem;
+    }
+
+    .aviso-titulo {
+      font-size: 1rem;
+      margin: 0;
+      font-weight: 600;
+      color: #111827;
+      text-align: left;
+    }
+
+    .nivel-rojo { color: #ef4444; }
+    .nivel-naranja { color: #f97316; }
+    .nivel-amarillo { color: #eab308; }
+
+    .aviso-fecha {
+      background: rgba(0, 122, 255, 0.1);
+      padding: 0.375rem 0.75rem;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      color: #007aff;
+      margin: 0.25rem 0;
+      font-weight: 500;
+      display: inline-block;
+    }
+
+    .aviso-resumen {
+      font-size: 0.875rem;
+      color: #6b7280;
+      margin-top: 0.5rem;
+      line-height: 1.4;
+    }
+
+    .seccion-aemet {
+      margin-top: 1.25rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid #e5e7eb;
+      text-align: left;
+    }
+
+    .seccion-aemet p {
+      margin: 0.25rem 0;
+      font-size: 0.875rem;
+      color: #6b7280;
+    }
+
+    .cargando {
+      text-align: left;
+      padding: 1.5rem;
+      color: #6b7280;
+      font-size: 1rem;
+    }
+    
+    
+  </style>
+  
+  <style>
+    /* === Search Box === */
+    .search-box {
+      background-color: white;
+      border-radius: 0.75rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+      padding: 1.25rem 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .search-box h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #ef4444;
+      margin: 0 0 0.25rem;
+    }
+
+    /* === Search Input === */
+    .search-input-wrapper {
+      position: relative;
+      width: 100%;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 0.75rem 2.75rem 0.75rem 1rem;
+      font-size: 1rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.5rem;
+      outline: none;
+      background-color: white;
+      transition: all 0.2s ease;
+    }
+
+    .search-input:focus {
+      border-color: #ef4444;
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+    }
+
+    .search-input.secret-mode {
+      border-color: #8b5cf6;
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
+    }
+
+    /* Botón buscar (lupa) */
+    .search-button-inline {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #6b7280;
+      cursor: pointer;
+      padding: 0.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+    }
+
+    .search-button-inline:hover {
+      color: #ef4444;
+    }
+
+    .search-button-inline svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* Botón × (limpiar) */
+    .clear-button {
+      position: absolute;
+      right: 2.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #9ca3af;
+      cursor: pointer;
+      font-size: 1.25rem;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.15s ease, color 0.15s ease;
+    }
+
+    .clear-button.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .clear-button:hover {
+      color: #ef4444;
+    }
+
+    /* Opciones de búsqueda: 2 columnas */
+    #searchOptions {
+      display: none;
+      margin-top: 1rem;
+    }
+
+    #searchOptions.show {
+      display: block;
+    }
+
+    .search-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .section-title {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: #4b5563;
+      margin: 0 0 0.75rem;
+      padding-bottom: 0.25rem;
+      border-bottom: 1px solid #e5e7eb;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.5rem;
+    }
+
+    @media (max-width: 480px) {
+      .options-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .search-option {
+      display: flex;
+      align-items: center;
+      background-color: white;
+      border: 1px solid #e5e7eb;
+      color: #374151;
+      font-size: 0.9375rem;
+      padding: 0.875rem 1rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s ease;
+    }
+
+    .search-option:hover {
+      border-color: #ef4444;
+      color: #ef4444;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .icon-placeholder {
+      flex-shrink: 0;
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      margin-right: 0.75rem;
+    }
+
+    .icon-placeholder img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+  </style>
+  
+</head>
+<body>
+
+  <header class="top-bar">
+    <button class="menu-btn" id="menuToggle">☰</button>
+    <h1>RSS</h1>
+  </header>
+
+  <div class="overlay" id="overlay"></div>
+
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-content">
+      <div class="sidebar-header">
+        <button id="closeSidebar">×</button>
+      </div>
+
+      <div class="sidebar-menu">
+        
+        <button class="menu-item" data-content="inicio">Inicio <span class="arrow"></span></button>
+        
+        <button class="menu-item" data-content="buscar">Buscar <span class="arrow"></span></button>
+
+        <button class="menu-item" data-target="submenu-3">Ajustes <span class="arrow">▶</span></button>
+        <div id="submenu-3" class="submenu">
+          <button data-content="ajustes-tema">Tema</button>
+          <button data-content="ajustes-idioma">Idioma</button>
+          <button data-content="ajustes-seguridad">Seguridad</button>
+        </div>
+
+        <button class="menu-item" data-content="acerca-de">
+          Acerca de <span class="arrow"></span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ✅ Contenido asociado a cada opción -->
+  <main class="main-content">
+    <!-- Inicio rápido (visible por defecto) -->
+    <div id="inicio" class="content-section active">
+      <h2 class="section-title">☂️ Tiempo</h2>
+      <div class="section-content">
+        
+        <div id="toggle-encabezado" class="encabezado-expandible" role="button" aria-expanded="false">
+          <!--<h2 class="titulo-principal">⚠️ Avisos Meteorológicos Oficiales</h2>-->
+          <div id="contador-avisos" class="titulo-principal">⚠️ Avisos Meteorológicos</div>
+          <div class="provincia">Provincia de Alicante · AEMET</div>
+          <!--<div id="contador-avisos" class="contador-avisos">Cargando...</div>-->
+          <!--<div class="contenedor-boton">
+            <a href="http://www.aemet.es/es/eltiempo/prediccion/municipios/torremanzanas-torre-de-les-macanes-la-id03132"
+               target="_blank" class="btn-comun">
+              AEMET
+            </a>
+          </div>-->
+
+          <div id="avisos-container" class="avisos-container collapsed">
+            <div id="avisos-lista" class="cargando">Cargando avisos...</div>
+            <div class="seccion-aemet">
+              <p>Datos oficiales de <a href="https://www.aemet.es" target="_blank" style="color:#007aff;text-decoration:none;">AEMET</a></p>
+              <a href="https://www.aemet.es/es/eltiempo/prediccion/avisos?area=03" class="btn-comun btn-aemet">Ver en AEMET</a>
+            </div>
+          </div>
+        </div>
+        
+        <div class="contenedor-boton">
+          <a href="http://www.aemet.es/es/eltiempo/prediccion/municipios/torremanzanas-torre-de-les-macanes-la-id03132" class="btn-comun">AEMET</a>
+        </div>
+        
+        <div class="contenedor-boton">
+          <a href="https://www.windy.com/38.607/-0.419?38.547,-0.451,11" class="btn-comun">Windy App</a>
+        </div>
+        
+        <div class="contenedor-boton">
+          <a href="https://www.ventusky.com/es/38.607;-0.419" class="btn-comun">Ventusky</a>
+        </div>
+
+        
+
+        <!-- Información adicional -->
+        <div id="toggle-info-extra" class="encabezado-expandible" role="button" aria-expanded="false">
+          <h2 class="titulo-principal">ℹ️ Información adicional</h2>
+          <div class="provincia">Enlaces y recursos útiles</div>
+          
+          <div id="info-extra-container" class="avisos-container collapsed">
+          <div style="padding: 1rem 0;">
+
+            <div class="contenedor-boton">
+              <a href="https://app.weathercloud.net/map#8592819644" class="btn-comun">Weather Cloud</a>
+            </div>
+
+            <div class="contenedor-boton">
+              <a href="https://www.meteored.com/es/" class="btn-comun">Meteored</a>
+            </div>
+            
+            <div class="contenedor-boton">
+              <a href="https://www.avamet.org/mxo-i.php?id=c32m132e01" class="btn-comun">Avamet</a>
+            </div>
+
+            <div class="contenedor-boton">
+              <a href="https://www.rain-alarm.com/" class="btn-comun">Rain Alarm</a>
+            </div>
+
+            <div class="contenedor-boton">
+              <a href="https://www.unwx.app/pwa/" class="btn-comun">Unwx Alarm</a>
+            </div>
+
+            <div class="contenedor-boton">
+              <a href="https://www.wunderground.com/wundermap" class="btn-comun">Wunderground</a>
+            </div>
+
+            <div class="contenedor-boton">
+              <a href="https://www.112cv.gva.es/es/preemergencias-meteorologicas" class="btn-comun">GVA 112</a>
+            </div>
+            
+            <div class="contenedor-boton">
+              <a href="https://visualizadores.ign.es/tproximos" class="btn-comun">Actividad Sísmica</a>
+            </div>
+
+            <p style="margin-top: 1rem; font-size: 0.75rem; color: #6b7280;">
+              Esta sección incluye enlaces de interés relacionados con la meteorología y la movilidad.
+            </p>
+          </div>
+        </div>
+        
+          
+        </div>
+        
+        <h2 class="section-title">🚗 Tráfico</h2>
+        <div class="contenedor-boton">
+          <a href="https://infocar.dgt.es/etraffic/Incidencias?ca=10&provIci=3&caracter=acontecimiento&accion_consultar=Consultar&IncidenciasRETENCION=IncidenciasRETENCION&IncidenciasOBRAS=IncidenciasOBRAS&IncidenciasPUERTOS=IncidenciasPUERTOS&IncidenciasMETEOROLOGICA=IncidenciasMETEOROLOGICA&IncidenciasEVENTOS=IncidenciasEVENTOS&IncidenciasOTROS=IncidenciasOTROS&IncidenciasRESTRICCIONES=IncidenciasRESTRICCIONES&ordenacion=fechahora_ini-DESC" class="btn-comun">Incidencias de tráfico (DGT)</a>
+        </div>
+
+        <h2 class="section-title">📰 Noticias</h2>
+        <div class="contenedor-boton">
+          <a href="https://news.google.com/home?hl=es&gl=ES&ceid=ES:es" class="btn-comun">Google News</a>
+        </div>
+        
+      </div>
+    </div>
+
+    <div id="buscar" class="content-section">
+      
+      <div class="section-content">
+        
+        <!-- === Search Box === -->
+        <div class="search-box">
+          <h1>Bunkr Searcher</h1>
+          <form id="searchForm">
+            <div class="search-input-wrapper">
+              <input
+                type="text"
+                id="searchInput"
+                placeholder="Search..."
+                class="search-input"
+                autocomplete="off"
+                autocapitalize="off"
+                spellcheck="false"
+                required
+              />
+              <button type="button" class="clear-button" id="clearButton" aria-label="Clear search">×</button>
+              <button type="submit" class="search-button-inline" aria-label="Search">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+              </button>
+            </div>
+          </form>
+          <div id="searchOptions"></div>
+        </div>
+        
+      </div>
+    </div>
+
+    
+    <div id="ajustes-tema" class="content-section">
+      <h2 class="section-title">🎨 Ajustes de Tema</h2>
+      <div class="section-content">
+        <label><input type="radio" name="theme" checked> Claro</label><br>
+        <label><input type="radio" name="theme"> Oscuro</label><br>
+        <label><input type="radio" name="theme"> Automático</label>
+      </div>
+    </div>
+
+    <div id="ajustes-idioma" class="content-section">
+      <h2 class="section-title">🌐 Idioma</h2>
+      <div class="section-content">
+        <select>
+          <option>Español</option>
+          <option>Inglés</option>
+          <option>Francés</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="ajustes-seguridad" class="content-section">
+      <h2 class="section-title">🔒 Seguridad</h2>
+      <div class="section-content">
+        <p>• Autenticación biométrica</p>
+        <p>• Bloqueo automático</p>
+        <p>• Cifrado de copias</p>
+      </div>
+    </div>
+
+    <div id="acerca-de" class="content-section">
+      <h2 class="section-title">ℹ️ Acerca de</h2>
+      <div class="section-content">
+        <p><strong>Mi App v1.0</strong></p>
+        <p>Una aplicación segura y rápida para gestionar tus datos.</p>
+        <p>© 2025 — Todos los derechos reservados.</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Script Menú Lateral -->
+  <script>
+    // ✅ Expandir menú lateral
+    const menuToggle = document.getElementById('menuToggle');
+    const closeSidebar = document.getElementById('closeSidebar');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('overlay');
+
+    function closeMenu() {
+      sidebar.classList.remove('open');
+      overlay.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+
+    function openMenu() {
+      sidebar.classList.add('open');
+      overlay.style.display = 'block';
+      document.body.style.overflow = 'hidden';
+    }
+
+    function showContent(sectionId) {
+      // Ocultar todos
+      document.querySelectorAll('.content-section').forEach(el => {
+        el.classList.remove('active');
+      });
+      // Mostrar el seleccionado
+      const target = document.getElementById(sectionId);
+      if (target) {
+        target.classList.add('active');
+      }
+    }
+
+    menuToggle.addEventListener('click', openMenu);
+    closeSidebar.addEventListener('click', closeMenu);
+    overlay.addEventListener('click', closeMenu);
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && sidebar.classList.contains('open')) {
+        closeMenu();
+      }
+    });
+
+    // ✅ Expandir submenús (sin cambiar contenido)
+    document.querySelectorAll('.menu-item').forEach(btn => {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const targetId = this.getAttribute('data-target');
+        if (!targetId) return; // no hacer nada si no tiene submenú (el contenido se cambia abajo)
+
+        const submenu = document.getElementById(targetId);
+        const isExpanded = this.classList.contains('expanded');
+
+        document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('expanded'));
+        document.querySelectorAll('.submenu').forEach(el => el.classList.remove('open'));
+
+        if (!isExpanded) {
+          this.classList.add('expanded');
+          submenu.classList.add('open');
+        }
+      });
+    });
+
+    // ✅ Cambiar contenido al hacer clic en subcategorías o botones sin submenú
+    document.querySelectorAll('[data-content]').forEach(btn => {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const sectionId = this.getAttribute('data-content');
+        if (sectionId) {
+          showContent(sectionId);
+          closeMenu(); // ✅ cierra sidebar tras seleccionar
+        }
+      });
+    });
+    // ✅ Mostrar al cargar
+    document.addEventListener('DOMContentLoaded', () => {
+      showContent('inicio');
+    });
+  </script>
+
+  <!-- Script Avisos AEMET -->
+  <!-- <script>
+    // 📡 Avisos AEMET (con try/catch aislado)
+    
+      const feedUrl = 'https://www.aemet.es/documentos_d/eltiempo/prediccion/avisos/rss/CAP_AFAP7703_ATOM.xml';
+      const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
+      const containerList = document.getElementById('avisos-lista');
+      const contadorEl = document.getElementById('contador-avisos');
+
+      const fallbackAvisos = () => {
+        if (containerList) containerList.innerHTML = '<p style="text-align:center;color:#6b7280;">⚠️ No disponible ahora.</p>';
+        if (contadorEl) contadorEl.textContent = '–';
+      };
+
+      fetch(apiUrl)
+        .then(r => r.ok ? r.json() : Promise.reject('HTTP error'))
+        .then(data => {
+          if (data.status !== 'ok') throw new Error('API error');
+          let items = data.items.filter(i => !i.title.includes('Estado completo'));
+          const count = items.length;
+          if (count === 0) {
+            //if (containerList) containerList.innerHTML = '<p style="text-align:center;">✅ Sin avisos activos.</p>';
+            //if (contadorEl) contadorEl.textContent = '0 avisos';
+            if (containerList) containerList.innerHTML = '<p style="text-align:center;">✅ Sin avisos activos.</p>';
+            if (contadorEl) contadorEl.textContent = '✅ 0 Avisos Meteorológicos Oficiales';
+            return;
+          }
+          if (contadorEl) {
+            contadorEl.textContent = `⚠️ ${count} Aviso${count !== 1 ? 's' : ''} Meteorológicos`;
+            //contadorEl.style.background = 'rgba(239, 68, 68, 0.15)';
+            //contadorEl.style.color = '#ef4444';
+          }
+          // (omito renderizado para brevedad — ya lo tienes)
+          let html = '';
+          items.forEach(item => {
+            const clean = item.title.replace(/^Aviso\.\s*Nivel\s+\w+\.\s*/, '');
+            const icon = clean.includes('Tormentas') ? '⛈️' : clean.includes('Lluvias') ? '🌧️' : '⚠️';
+            const level = /rojo/i.test(item.title) ? 'nivel-rojo' : /naranja/i.test(item.title) ? 'nivel-naranja' : 'nivel-amarillo';
+            html += `<div class="aviso"><div class="aviso-header"><div class="aviso-icon">${icon}</div><h3 class="aviso-titulo ${level}">${clean}</h3></div><p class="aviso-resumen">${item.description.split(' de nivel ')[0]}.</p></div>`;
+          });
+          if (containerList) containerList.innerHTML = html;
+        })
+        .catch(err => {
+          console.warn('AEMET no disponible:', err);
+          fallbackAvisos();
+        });
+    
+  </script> -->
+  <script>
+  const feedUrl = 'https://www.aemet.es/documentos_d/eltiempo/prediccion/avisos/rss/CAP_AFAP7703_ATOM.xml';
+  const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
+
+  const containerList = document.getElementById('avisos-lista');
+  const contadorEl = document.getElementById('contador-avisos');
+
+  const fallbackAvisos = () => {
+    if (containerList)
+      containerList.innerHTML =
+        '<p style="text-align:center;color:#6b7280;">⚠️ No disponible ahora.</p>';
+    if (contadorEl) contadorEl.textContent = '–';
+  };
+
+  // 🧹 Limpia HTML
+  function limpiarHTML(texto) {
+    const div = document.createElement('div');
+    div.innerHTML = texto;
+    return div.textContent || '';
+  }
+    
+  // 📄 Extrae descripción del aviso (sin fechas)
+  function extraerDescripcionAviso(texto) {
+    texto = limpiarHTML(texto);
+
+    // Corta antes del primer " de " seguido de hora
+    const match = texto.match(/^(Aviso.*?nivel\s+(amarillo|naranja|rojo))/i);
+    return match ? match[1] : texto;
+  }
+  function extraerRangoAvisoDesdeSummary(texto) {
+    const limpio = texto.replace(/<[^>]*>/g, '');
+
+    const regex =
+      /de\s+(\d{1,2}:\d{2})\s+(\d{2}-\d{2}-\d{4}).*?a\s+(\d{1,2}:\d{2})\s+(\d{2}-\d{2}-\d{4})/i;
+
+    const match = limpio.match(regex);
+    if (!match) return null;
+
+    return {
+      inicioHora: match[1],
+      inicioFecha: match[2],
+      finHora: match[3],
+      finFecha: match[4]
+    };
+  }
+
+  function obtenerFechaEmision(pubDate) {
+    return new Date(pubDate).toLocaleString('es-ES');
+  }
+
+  fetch(apiUrl)
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(data => {
+      if (data.status !== 'ok') throw new Error();
+
+      const items = data.items.filter(i => !i.title.includes('Estado completo'));
+      const count = items.length;
+
+      if (contadorEl) {
+        contadorEl.textContent = count
+          ? `⚠️ ${count} Aviso${count !== 1 ? 's' : ''} Meteorológicos`
+          : '✅ 0 Avisos Meteorológicos Oficiales';
+      }
+
+      if (!count) {
+        containerList.innerHTML =
+          '<p style="text-align:center;">✅ Sin avisos activos.</p>';
+        return;
+      }
+
+      let html = '';
+
+      items.forEach(item => {
+        const clean = item.title.replace(/^Aviso\.\s*Nivel\s+\w+\.\s*/, '');
+
+        const icon =
+          clean.includes('Tormentas') ? '⛈️' :
+          clean.includes('Lluvias')   ? '🌧️' :
+          clean.includes('Nieve')     ? '❄️' :
+          '⚠️';
+
+        const level =
+          /rojo/i.test(item.title)    ? 'nivel-rojo' :
+          /naranja/i.test(item.title) ? 'nivel-naranja' :
+          'nivel-amarillo';
+
+        const rango = extraerRangoAvisoDesdeSummary(item.contentSnippet || item.description);
+        const emision = obtenerFechaEmision(item.pubDate);
+        
+        const summary = item.contentSnippet || item.description;
+        const descripcion = extraerDescripcionAviso(summary);
+
+        const fechaAvisoHTML = rango
+          ? `<p class="aviso-fecha-hora">
+               📅 ${rango.inicioFecha}
+             </p><p class="aviso-fecha-hora">
+               🕒 ${rango.inicioHora} – ${rango.finHora}
+             </p>`
+          : '';
+
+        html += `
+          <div class="aviso">
+            <div class="aviso-header">
+              <div class="aviso-icon">${icon}</div>
+              <h3 class="aviso-titulo ${level}">${clean}</h3>
+            </div>
+            
+            <p class="aviso-emision" style="font-size:0.9em;color:#6b7280;">
+              ${descripcion}
+            </p>
+
+            ${fechaAvisoHTML}
+
+            <p class="aviso-emision" style="font-size:0.8em;color:#6b7280;">
+              📤 Emitido: ${emision}
+            </p>
+          </div>
+        `;
+      });
+
+      containerList.innerHTML = html;
+    })
+    .catch(() => fallbackAvisos());
+</script>
+
+
+
+
+  
+  <!-- Script Toggle avisos / Info extra -->
+  <script>
+    // 🌦️ Toggle avisos
+    const encabezado = document.getElementById('toggle-encabezado');
+    const avisosContainer = document.getElementById('avisos-container');
+    encabezado?.addEventListener('click', (e) => {
+      // ❗ Detener propagación si el clic fue en el botón AEMET
+      if (e.target.closest('.btn-comun')) return;
+
+      // ✅ Toggle simple: display none/block
+      const isVisible = avisosContainer.style.display === 'block';
+      avisosContainer.style.display = isVisible ? 'none' : 'block';
+      avisosContainer?.classList.toggle('collapsed');
+      encabezado.setAttribute('aria-expanded', !isVisible);
+    });
+
+    // ℹ️ Toggle info extra
+    const infoHeader = document.getElementById('toggle-info-extra');
+    const infoContainer = document.getElementById('info-extra-container');
+
+    infoHeader?.addEventListener('click', (e) => {
+      // ❗ Detener si el clic fue dentro del contenedor expandido (no en el header)
+      if (e.target.closest('#info-extra-container')) {
+        return; // no hacer nada — dejar que los botones actúen libremente
+      }
+
+      infoContainer?.classList.toggle('collapsed');
+      infoHeader.setAttribute('aria-expanded', infoContainer?.classList.contains('collapsed') ? 'false' : 'true');
+    });
+  </script>
+  
+  <!-- Script para insertar favicon automáticamente -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const buttons = document.querySelectorAll('.btn-comun');
+
+      buttons.forEach(btn => {
+        const url = btn.href;
+        if (!url) return;
+
+        try {
+          const urlObj = new URL(url);
+          const domain = urlObj.hostname;
+          const fullUrl = urlObj.origin;
+
+          const spanWrapper = document.createElement('span');
+          spanWrapper.style.display = 'inline-flex';
+          spanWrapper.style.alignItems = 'center';
+          spanWrapper.style.gap = '6px';
+
+          const textContent = btn.textContent.trim();
+          btn.textContent = '';
+          spanWrapper.appendChild(document.createTextNode(textContent));
+
+          const favicon = document.createElement('img');
+          favicon.width = 30;
+          favicon.height = 30;
+          favicon.alt = '';
+          favicon.style.verticalAlign = 'middle';
+
+          // ✅ Cuatro fuentes — ¡sin espacios extra!
+          const faviconSources = [
+            `https://icon.horse/icon/${domain}`,
+            `https://www.google.com/s2/favicons?domain=${domain}&sz=16`,
+            `https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(fullUrl)}&size=16`,
+            `https://favicons.google.com/${domain}?size=16` // 🔟 CUARTO: favicons.google.com
+          ];
+
+          let currentTry = 0;
+
+          const tryNext = () => {
+            if (currentTry >= faviconSources.length) {
+              // ❌ Todas fallaron → fallback: primera letra en círculo
+              favicon.remove(); // eliminar <img> fallida
+
+              const letterSpan = document.createElement('span');
+              letterSpan.style.display = 'inline-flex';
+              letterSpan.style.alignItems = 'center';
+              letterSpan.style.justifyContent = 'center';
+              letterSpan.style.width = '30px';
+              letterSpan.style.height = '30px';
+              letterSpan.style.fontSize = '10px';
+              letterSpan.style.fontWeight = 'bold';
+              letterSpan.style.color = '#fff';
+              letterSpan.style.backgroundColor = '#666';
+              letterSpan.style.borderRadius = '50%';
+              letterSpan.textContent = domain.charAt(0).toUpperCase();
+
+              spanWrapper.insertBefore(letterSpan, spanWrapper.firstChild);
+              btn.appendChild(spanWrapper);
+              return;
+            }
+
+            favicon.onerror = () => {
+              currentTry++;
+              tryNext();
+            };
+
+            favicon.onload = () => {
+              favicon.onerror = null;
+              spanWrapper.insertBefore(favicon, spanWrapper.firstChild);
+              btn.appendChild(spanWrapper);
+            };
+
+            // ✅ Asignar URL limpia (sin espacios)
+            favicon.src = faviconSources[currentTry];
+          };
+
+          tryNext();
+        } catch (e) {
+          console.warn('Error procesando enlace:', url, e);
+        }
+      });
+    });
+    </script>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const buttons = document.querySelectorAll('.btn-comun');
+      const HOLD_THRESHOLD = 500; // milisegundos
+
+      buttons.forEach(btn => {
+        let holdTimer = null;
+        let held = false;
+
+        // Función para cancelar hold
+        const cancelHold = () => {
+          if (holdTimer) {
+            clearTimeout(holdTimer);
+            holdTimer = null;
+          }
+          held = false;
+        };
+
+        // Iniciar temporizador al presionar
+        const startHold = (e) => {
+          cancelHold();
+          holdTimer = setTimeout(() => {
+            held = true;
+            // Abrir en nueva pestaña
+            const url = btn.href;
+            if (url) {
+              // Bloquear el comportamiento por defecto del evento actual (touch/mouse)
+              e.preventDefault();
+              e.stopPropagation();
+              // Abrir en nueva pestaña
+              const newTab = window.open(url, '_blank');
+              if (newTab) newTab.focus();
+            }
+          }, HOLD_THRESHOLD);
+        };
+
+        // Eventos para iniciar hold
+        btn.addEventListener('mousedown', startHold);
+        btn.addEventListener('touchstart', startHold, { passive: false });
+
+        // Eventos para cancelar hold
+        btn.addEventListener('mouseup', cancelHold);
+        btn.addEventListener('mouseleave', cancelHold);
+        btn.addEventListener('touchend', cancelHold);
+        btn.addEventListener('touchcancel', cancelHold);
+
+        // Evento click: solo prevenir si fue hold
+        btn.addEventListener('click', function (e) {
+          if (held) {
+            held = false;
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }
+          // Si no fue hold → dejar que el enlace funcione normalmente (misma pestaña)
+          // ✅ NADA más: no hacemos preventDefault → funciona por defecto
+        });
+      });
+    });
+  </script>
+  
+  <!-- Script busqueda -->
+  <!-- <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      /* =============================== */
+      /* 🔹 BLOQUE 1: BUSCADOR */
+      /* =============================== */
+
+      // 📚 Motores
+      const searchEngines = [
+        // 🔍 Motores generales
+        { id: 'yandex',      name: 'Yandex',           category: '🔍 Motores de búsqueda', urlTemplate: 'https://yandex.com/search/?text={q}',            domain: 'yandex.com',      tags: [] },
+        { id: 'google',      name: 'Google',           category: '🔍 Motores de búsqueda', urlTemplate: 'https://www.google.com/search?q={q}',          domain: 'google.com',      tags: [] },
+        { id: 'bing',        name: 'Bing',             category: '🔍 Motores de búsqueda', urlTemplate: 'https://www.bing.com/search?q={q}',           domain: 'bing.com',        tags: [] },
+
+        // 📱 Redes & Comunidades
+        { id: 'vk',          name: 'VK',               category: '📱 Redes sociales',      urlTemplate: 'https://vk.com/search?q={q}',                domain: 'vk.com',          tags: ['xxx'] },
+        { id: 'telegram',    name: 'Telegram Tgs',     category: '📱 Redes sociales',      urlTemplate: 'https://tgsearch.su/?post_type=tg_channel&s={q}', domain: 'tgsearch.su',     tags: ['xxx'] },
+        { id: 'telegramchannel', name: 'Telegram Channel', category: '📱 Redes sociales', urlTemplate: 'https://telegramchannels.me/search?search={q}&type=all', domain: 'telegramchannels.me', tags: ['xxx'] },
+
+        // 🎬 Multimedia (solo en modo secreto)
+        { id: 'bunkr',       name: 'Bunkr Albums',     category: '🎬 Multimedia',          urlTemplate: 'https://bunkr-albums.io/?search={q}',        domain: 'bunkr-albums.io', tags: ['xxx'] },
+        { id: '24vids',      name: '24vids',           category: '🎬 Multimedia',          urlTemplate: 'https://www.24vids.com/search/{q}',          domain: '24vids.com',      tags: ['xxx'] },
+        { id: 'rumble',      name: 'Rumble',           category: '🎬 Multimedia',          urlTemplate: 'https://rumble.com/search/all?q={q}',        domain: 'rumble.com',      tags: ['xxx'] },
+        { id: 'simptown',    name: 'SimpTown',         category: '🎬 Multimedia',          urlTemplate: 'https://simptown.su/search/{q}/sort/popular/dir/desc/page/1', domain: 'simptown.su', tags: ['xxx'] },
+
+        //🛠️ Herramientas
+        { id: 'simpleicons',      name: 'SimpleIcons',           category: '🛠️ Herramientas',       urlTemplate: 'https://simpleicons.org/?q={q}',                   domain: 'https://simpleicons.org/',       tags: [] }
+
+
+      ];
+      
+      const iconUrl = (domain) => `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
+      let secretModeActive = localStorage.getItem('secretMode') === 'true';
+      const SECRET_CODE = 'xxx';
+
+      function getVisibleEngines() {
+        return secretModeActive
+          ? searchEngines
+          : searchEngines.filter(engine => !engine.tags.includes('xxx'));
+      }
+
+      function renderSearchOptions() {
+        const container = document.getElementById('searchOptions');
+        if (!container) return;
+
+        const engines = getVisibleEngines();
+        const groups = {};
+        engines.forEach(item => {
+          if (!groups[item.category]) groups[item.category] = [];
+          groups[item.category].push(item);
+        });
+
+        let html = '';
+        for (const [category, items] of Object.entries(groups)) {
+          html += `<div class="search-section"><h3 class="section-title">${category}</h3><div class="options-grid">`;
+          items.forEach(item => {
+            html += `<button class="search-option" data-site="${item.id}" title="Buscar en ${item.name}"><img class="icon-placeholder" src="${iconUrl(item.domain)}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.paddingLeft='0'"><span>${item.name}</span></button>`;
+          });
+          html += `</div></div>`;
+        }
+        container.innerHTML = html;
+      }
+
+      // ✅ Inicializar buscador (siempre)
+      {
+        const form = document.getElementById('searchForm');
+        const input = document.getElementById('searchInput');
+        const optionsDiv = document.getElementById('searchOptions');
+        const clearBtn = document.getElementById('clearButton');
+        let currentQuery = '';
+        const defaultPlaceholder = input?.placeholder || 'Search...';
+
+        // Restaurar modo secreto
+        if (secretModeActive && input) {
+          input.classList.add('secret-mode');
+          input.placeholder = 'Secret mode 🔓';
+        }
+        
+        renderSearchOptions();
+
+        // 📤 Submit
+        form?.addEventListener('submit', (e) => {
+          e.preventDefault();
+          currentQuery = input?.value.trim() || '';
+          if (!currentQuery) return;
+          if (optionsDiv) {
+            optionsDiv.classList.add('show');
+            optionsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        });
+
+        // ✍️ Input
+        input?.addEventListener('input', () => {
+          const trimmed = input.value.trim();
+          if (trimmed === SECRET_CODE) {
+            secretModeActive = !secretModeActive;
+            localStorage.setItem('secretMode', secretModeActive ? 'true' : 'false');
+            input.placeholder = secretModeActive ? 'Secret mode 🔓' : defaultPlaceholder;
+            input.classList.toggle('secret-mode', secretModeActive);
+            renderSearchOptions();
+            input.value = '';
+            clearBtn?.classList.remove('visible');
+            return;
+          }
+          const hasText = trimmed !== '';
+          clearBtn?.classList.toggle('visible', hasText);
+          if (!hasText && optionsDiv) optionsDiv.classList.remove('show');
+        });
+
+        // ✖️ Limpiar
+        clearBtn?.addEventListener('click', () => {
+          if (input) {
+            input.value = '';
+            input.focus();
+          }
+          clearBtn?.classList.remove('visible');
+          if (optionsDiv) optionsDiv.classList.remove('show');
+        });
+
+        // 🖱️ Clic motor
+        optionsDiv?.addEventListener('click', (e) => {
+          const btn = e.target.closest('.search-option');
+          if (!btn || !currentQuery) return;
+          const id = btn.dataset.site;
+          const engine = searchEngines.find(s => s.id === id);
+          if (!engine) return;
+          const url = engine.urlTemplate.replace('{q}', encodeURIComponent(currentQuery));
+          window.open(url, '_blank', 'noopener,noreferrer');
+        });
+      }
+
+
+    });
+  </script> -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      /* =============================== */
+      /* 🔹 BLOQUE 1: BUSCADOR — MODO NORMAL FORZADO EN INICIO */
+      /* =============================== */
+
+      // 📚 Motores
+      const searchEngines = [
+        // 🔍 Motores generales
+        { id: 'yandex',      name: 'Yandex',           category: '🔍 Motores de búsqueda', urlTemplate: 'https://yandex.com/search/?text={q}',            domain: 'yandex.com',      tags: [] },
+        { id: 'google',      name: 'Google',           category: '🔍 Motores de búsqueda', urlTemplate: 'https://www.google.com/search?q={q}',          domain: 'google.com',      tags: [] },
+        { id: 'bing',        name: 'Bing',             category: '🔍 Motores de búsqueda', urlTemplate: 'https://www.bing.com/search?q={q}',           domain: 'bing.com',        tags: [] },
+        { id: 'brave',       name: 'Brave',            category: '🔍 Motores de búsqueda', urlTemplate: 'https://search.brave.com/search?q={q}&source=web',           domain: 'search.brave.com',        tags: [] },
+        { id: 'startpage',   name: 'Startpage',        category: '🔍 Motores de búsqueda', urlTemplate: 'https://www.startpage.com/sp/search?q={q}',           domain: 'startpage.com',        tags: [] },
+        { id: 'kantan',      name: 'Kantan',           category: '🔍 Motores de búsqueda', urlTemplate: 'https://kantan.cat/search?q={q}&category_general=1&language=auto&time_range=&safesearch=0&theme=simple',           domain: 'kantan.cat',        tags: [] },
+        
+        // 📱 Redes & Comunidades
+        { id: 'vk',          name: 'VK',               category: '📱 Redes sociales',      urlTemplate: 'https://vk.com/search?q={q}',                domain: 'vk.com',          tags: ['xxx'] },
+        { id: 'telegram',    name: 'Telegram Tgs',     category: '📱 Redes sociales',      urlTemplate: 'https://tgsearch.su/?post_type=tg_channel&s={q}', domain: 'tgsearch.su',     tags: ['xxx'] },
+        { id: 'telegramchannel', name: 'Telegram Channel', category: '📱 Redes sociales', urlTemplate: 'https://telegramchannels.me/search?search={q}&type=all', domain: 'telegramchannels.me', tags: ['xxx'] },
+
+        // 🎬 Multimedia (solo en modo secreto)
+        { id: 'bunkr',       name: 'Bunkr Albums',     category: '🎬 Multimedia',          urlTemplate: 'https://bunkr-albums.io/?search={q}',        domain: 'bunkr-albums.io', tags: ['xxx'] },
+        { id: '24vids',      name: '24vids',           category: '🎬 Multimedia',          urlTemplate: 'https://www.24vids.com/search/{q}',          domain: '24vids.com',      tags: ['xxx'] },
+        { id: 'rumble',      name: 'Rumble',           category: '🎬 Multimedia',          urlTemplate: 'https://rumble.com/search/all?q={q}',        domain: 'rumble.com',      tags: ['xxx'] },
+        { id: 'simptown',    name: 'SimpTown',         category: '🎬 Multimedia',          urlTemplate: 'https://simptown.su/search/{q}/sort/popular/dir/desc/page/1', domain: 'simptown.su', tags: ['xxx'] },
+
+        //🛠️ Herramientas
+        { id: 'simpleicons',      name: 'SimpleIcons',           category: '🛠️ Herramientas',       urlTemplate: 'https://simpleicons.org/?q={q}',                   domain: 'https://simpleicons.org/',       tags: [] }
+
+
+      ];
+      
+      const iconUrl = (domain) => `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
+
+      // ✅ 🔒 FORZAR MODO NORMAL AL INICIAR — ignora localStorage por completo
+      let secretModeActive = false;
+      localStorage.removeItem('secretMode'); // 🧹 Limpieza total: borra cualquier rastro previo
+
+      const SECRET_CODE = 'xxx';
+
+      function getVisibleEngines() {
+        return secretModeActive
+          ? searchEngines
+          : searchEngines.filter(engine => !engine.tags.includes('xxx'));
+      }
+
+      function renderSearchOptions() {
+        const container = document.getElementById('searchOptions');
+        if (!container) return;
+
+        const engines = getVisibleEngines();
+        const groups = {};
+        engines.forEach(item => {
+          if (!groups[item.category]) groups[item.category] = [];
+          groups[item.category].push(item);
+        });
+
+        let html = '';
+        for (const [category, items] of Object.entries(groups)) {
+          html += `<div class="search-section"><h3 class="section-title">${category}</h3><div class="options-grid">`;
+          items.forEach(item => {
+            html += `<button class="search-option" data-site="${item.id}" title="Buscar en ${item.name}">
+              <img class="icon-placeholder" src="${iconUrl(item.domain)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.paddingLeft='0'">
+              <span>${item.name}</span>
+            </button>`;
+          });
+          html += `</div></div>`;
+        }
+        container.innerHTML = html;
+      }
+
+      // ✅ Inicializar buscador (modo normal garantizado)
+      {
+        const form = document.getElementById('searchForm');
+        const input = document.getElementById('searchInput');
+        const optionsDiv = document.getElementById('searchOptions');
+        const clearBtn = document.getElementById('clearButton');
+        let currentQuery = '';
+        const defaultPlaceholder = input?.placeholder || 'Search...';
+
+        // ✅ Restablecer UI al modo normal sin condición
+        if (input) {
+          input.classList.remove('secret-mode');
+          input.placeholder = defaultPlaceholder;
+          input.value = '';
+        }
+        if (clearBtn) clearBtn.classList.remove('visible');
+        if (optionsDiv) optionsDiv.classList.remove('show');
+
+        renderSearchOptions();
+
+        // 📤 Submit
+        form?.addEventListener('submit', (e) => {
+          e.preventDefault();
+          currentQuery = input?.value.trim() || '';
+          if (!currentQuery) return;
+          if (optionsDiv) {
+            optionsDiv.classList.add('show');
+            optionsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        });
+
+        // ✍️ Input — solo aquí se activa/guarda el modo secreto (durante esta sesión)
+        input?.addEventListener('input', () => {
+          const trimmed = input.value.trim();
+          if (trimmed === SECRET_CODE) {
+            secretModeActive = !secretModeActive;
+            // ✅ Solo ahora guardamos el estado — no antes
+            localStorage.setItem('secretMode', secretModeActive ? 'true' : 'false');
+            input.placeholder = secretModeActive ? 'Secret mode 🔓' : defaultPlaceholder;
+            input.classList.toggle('secret-mode', secretModeActive);
+            renderSearchOptions();
+            input.value = '';
+            clearBtn?.classList.remove('visible');
+            return;
+          }
+          const hasText = trimmed !== '';
+          clearBtn?.classList.toggle('visible', hasText);
+          if (!hasText && optionsDiv) optionsDiv.classList.remove('show');
+        });
+
+        // ✖️ Limpiar
+        clearBtn?.addEventListener('click', () => {
+          if (input) {
+            input.value = '';
+            input.focus();
+          }
+          clearBtn?.classList.remove('visible');
+          if (optionsDiv) optionsDiv.classList.remove('show');
+        });
+
+        // 🖱️ Clic motor
+        optionsDiv?.addEventListener('click', (e) => {
+          const btn = e.target.closest('.search-option');
+          if (!btn || !currentQuery) return;
+          const id = btn.dataset.site;
+          const engine = searchEngines.find(s => s.id === id);
+          if (!engine) return;
+          const url = engine.urlTemplate.replace('{q}', encodeURIComponent(currentQuery));
+          window.open(url, '_blank', 'noopener,noreferrer');
+        });
+      }
+    });
+  </script>
+  
+</body>
+</html>
