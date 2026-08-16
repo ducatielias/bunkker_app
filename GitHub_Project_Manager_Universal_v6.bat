@@ -1,25 +1,26 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-title GitHub Project Manager Universal v4
+title GitHub Project Manager Universal v6
 cls
 
 REM ============================================================
-REM GITHUB PROJECT MANAGER UNIVERSAL v4
+REM GITHUB PROJECT MANAGER UNIVERSAL v6
 REM Windows CMD compatible: ASCII + CRLF + no BOM
 REM
-REM Funciones:
-REM - Crear repositorio nuevo en GitHub (requiere GitHub CLI)
-REM - Conectar a repositorio existente
-REM - Actualizar origin recordado
-REM - Renombrar master -> main automaticamente
-REM - Detectar backups/ZIPs/versiones antes del primer commit
-REM - Opcion de ignorarlos en .gitignore
-REM - Nunca hace force push automaticamente
+REM Mejoras v6:
+REM - main como rama normal de trabajo
+REM - si estas en upload-* y hay cambios, primero hace commit
+REM   y DESPUES intenta volver a main de forma segura
+REM - al ignorar backups/versiones ya trackeados, los elimina
+REM   SOLO del indice Git con git rm --cached
+REM - NO borra archivos locales
+REM - no vuelve a preguntar por backups ya ignorados
+REM - nunca hace force push automaticamente
 REM ============================================================
 
 echo.
 echo ============================================================
-echo          GITHUB PROJECT MANAGER UNIVERSAL v4
+echo          GITHUB PROJECT MANAGER UNIVERSAL v6
 echo ============================================================
 echo.
 echo Carpeta actual:
@@ -58,20 +59,6 @@ if not exist ".git" (
 )
 
 REM ------------------------------------------------------------
-REM Asegurar main en repositorios nuevos/actuales
-REM ------------------------------------------------------------
-set "CURRENT_BRANCH="
-for /f "delims=" %%B in ('git branch --show-current 2^>nul') do set "CURRENT_BRANCH=%%B"
-
-if /I "!CURRENT_BRANCH!"=="master" (
-    echo.
-    echo [INFO] Renombrando automaticamente master a main...
-    git branch -M main
-    if errorlevel 1 goto :git_error
-    set "CURRENT_BRANCH=main"
-)
-
-REM ------------------------------------------------------------
 REM Identidad Git
 REM ------------------------------------------------------------
 set "GIT_NAME="
@@ -103,30 +90,34 @@ if not defined GIT_EMAIL (
 )
 
 REM ------------------------------------------------------------
-REM Crear .gitignore opcional
+REM .gitignore
 REM ------------------------------------------------------------
 if not exist ".gitignore" (
     echo.
     echo [INFO] Este proyecto no tiene .gitignore.
     set /p MAKEIGNORE=Crear un .gitignore basico? [S/N]: 
-    if /I "!MAKEIGNORE!"=="S" (
-        call :create_basic_gitignore
-    )
+    if /I "!MAKEIGNORE!"=="S" call :create_basic_gitignore
 )
 
 REM ------------------------------------------------------------
-REM Detectar backups/versiones/ZIPs
+REM Detectar backups/versiones
 REM ------------------------------------------------------------
 call :detect_backups
 
 REM ------------------------------------------------------------
-REM Detectar origin recordado
+REM Detectar origin
 REM ------------------------------------------------------------
 set "REMEMBERED_REMOTE="
 git remote get-url origin >nul 2>&1
 if not errorlevel 1 (
     for /f "delims=" %%R in ('git remote get-url origin') do set "REMEMBERED_REMOTE=%%R"
 )
+
+REM ------------------------------------------------------------
+REM Normalizar master -> main si es trivial
+REM No intentamos integrar upload-* hasta despues del commit.
+REM ------------------------------------------------------------
+call :normalize_master_only
 
 echo.
 echo ============================================================
@@ -162,7 +153,7 @@ pause
 exit /b 1
 
 REM ============================================================
-REM OPCION 1
+REM OPCION 1 - CREAR REPO NUEVO
 REM ============================================================
 :create_new
 echo.
@@ -219,8 +210,14 @@ set "DESCRIPTION="
 echo.
 set /p DESCRIPTION=Descripcion opcional: 
 
+call :ensure_initial_main
+if errorlevel 1 exit /b 1
+
 call :prepare_commit
 if errorlevel 1 exit /b 1
+
+REM Tras commit, intentar normalizar upload-* a main si procede.
+call :normalize_upload_after_commit
 
 if defined REMEMBERED_REMOTE (
     echo.
@@ -258,7 +255,7 @@ for /f "delims=" %%R in ('git remote get-url origin') do set "REMEMBERED_REMOTE=
 goto :safe_push_current
 
 REM ============================================================
-REM OPCION 2
+REM OPCION 2 - CONECTAR EXISTENTE
 REM ============================================================
 :connect_existing
 echo.
@@ -306,7 +303,7 @@ set "REMEMBERED_REMOTE=!REMOTE_URL!"
 goto :verify_and_update
 
 REM ============================================================
-REM OPCION 3
+REM OPCION 3 - ACTUALIZAR RECORDADO
 REM ============================================================
 :use_remembered
 if not defined REMEMBERED_REMOTE (
@@ -329,7 +326,7 @@ echo.
 goto :verify_and_update
 
 REM ============================================================
-REM OPCION 4
+REM OPCION 4 - VER CONFIG
 REM ============================================================
 :show_config
 echo.
@@ -360,7 +357,7 @@ pause
 exit /b 0
 
 REM ============================================================
-REM VERIFICAR Y ACTUALIZAR
+REM VERIFICAR + ACTUALIZAR
 REM ============================================================
 :verify_and_update
 echo.
@@ -377,9 +374,156 @@ if errorlevel 1 (
 )
 
 echo [OK] Repositorio remoto accesible.
+
+git fetch origin --prune
+if errorlevel 1 echo [INFO] El remoto puede estar vacio. Continuando...
+
+call :ensure_initial_main
+if errorlevel 1 exit /b 1
+
+REM IMPORTANTE v6:
+REM primero commit en la rama actual, luego intentamos normalizar.
 call :prepare_commit
 if errorlevel 1 exit /b 1
+
+call :normalize_upload_after_commit
+
 goto :safe_push_current
+
+REM ============================================================
+REM MASTER -> MAIN
+REM ============================================================
+:normalize_master_only
+set "CURRENT_BRANCH="
+for /f "delims=" %%B in ('git branch --show-current 2^>nul') do set "CURRENT_BRANCH=%%B"
+
+if /I "!CURRENT_BRANCH!"=="master" (
+    echo.
+    echo [INFO] Renombrando automaticamente master a main...
+    git branch -M main
+    if errorlevel 1 (
+        echo [AVISO] No se pudo renombrar master a main.
+    ) else (
+        echo [OK] Rama renombrada a main.
+    )
+)
+exit /b 0
+
+REM ============================================================
+REM ASEGURAR MAIN EN REPO SIN COMMITS
+REM ============================================================
+:ensure_initial_main
+set "CURRENT_BRANCH="
+for /f "delims=" %%B in ('git branch --show-current 2^>nul') do set "CURRENT_BRANCH=%%B"
+
+if not defined CURRENT_BRANCH (
+    git symbolic-ref HEAD refs/heads/main >nul 2>&1
+    exit /b 0
+)
+
+if /I "!CURRENT_BRANCH!"=="master" (
+    git branch -M main
+    if errorlevel 1 (
+        echo [ERROR] No se pudo renombrar master a main.
+        exit /b 1
+    )
+)
+exit /b 0
+
+REM ============================================================
+REM NORMALIZAR upload-* DESPUES DEL COMMIT
+REM ============================================================
+:normalize_upload_after_commit
+set "CURRENT_BRANCH="
+for /f "delims=" %%B in ('git branch --show-current 2^>nul') do set "CURRENT_BRANCH=%%B"
+
+if not defined CURRENT_BRANCH exit /b 0
+
+echo !CURRENT_BRANCH! | findstr /B /I "upload-" >nul
+if errorlevel 1 exit /b 0
+
+REM Ahora deberia estar limpio tras prepare_commit.
+git status --porcelain | findstr . >nul
+if not errorlevel 1 (
+    echo.
+    echo [AVISO] Aun hay cambios locales pendientes.
+    echo [AVISO] Se mantiene !CURRENT_BRANCH! por seguridad.
+    exit /b 0
+)
+
+echo.
+echo [INFO] Rama temporal detectada:
+echo   !CURRENT_BRANCH!
+echo [INFO] Intentando volver a main sin perder commits...
+
+REM Caso 1: main local existe y es ancestro de upload -> fast-forward.
+git show-ref --verify --quiet refs/heads/main
+if not errorlevel 1 (
+    git merge-base --is-ancestor main "!CURRENT_BRANCH!" >nul 2>&1
+    if not errorlevel 1 (
+        git checkout main
+        if errorlevel 1 (
+            echo [AVISO] No se pudo cambiar a main.
+            exit /b 0
+        )
+
+        git merge --ff-only "!CURRENT_BRANCH!"
+        if errorlevel 1 (
+            echo [AVISO] No se pudo avanzar main mediante fast-forward.
+            git checkout "!CURRENT_BRANCH!" >nul 2>&1
+            exit /b 0
+        )
+
+        echo [OK] main actualizada con todos los commits de !CURRENT_BRANCH!.
+        exit /b 0
+    )
+)
+
+REM Caso 2: no hay main local, pero origin/main existe y es ancestro.
+git show-ref --verify --quiet refs/heads/main
+if errorlevel 1 (
+    git show-ref --verify --quiet refs/remotes/origin/main
+    if not errorlevel 1 (
+        git merge-base --is-ancestor origin/main "!CURRENT_BRANCH!" >nul 2>&1
+        if not errorlevel 1 (
+            git checkout -b main origin/main
+            if errorlevel 1 (
+                echo [AVISO] No se pudo crear main desde origin/main.
+                exit /b 0
+            )
+
+            git merge --ff-only "!CURRENT_BRANCH!"
+            if errorlevel 1 (
+                echo [AVISO] No se pudo integrar !CURRENT_BRANCH! por fast-forward.
+                git checkout "!CURRENT_BRANCH!" >nul 2>&1
+                git branch -D main >nul 2>&1
+                exit /b 0
+            )
+
+            echo [OK] main creada y actualizada con la rama temporal.
+            exit /b 0
+        )
+    )
+)
+
+REM Caso 3: no existe main ni local ni remota -> renombrar upload a main.
+git show-ref --verify --quiet refs/heads/main
+if errorlevel 1 (
+    git show-ref --verify --quiet refs/remotes/origin/main
+    if errorlevel 1 (
+        echo [INFO] No existe main local ni origin/main.
+        echo [INFO] Renombrando !CURRENT_BRANCH! a main...
+        git branch -M main
+        if not errorlevel 1 (
+            echo [OK] Rama temporal convertida en main.
+            exit /b 0
+        )
+    )
+)
+
+echo [AVISO] No es seguro integrar automaticamente !CURRENT_BRANCH! en main.
+echo [AVISO] Se mantiene la rama temporal.
+exit /b 0
 
 REM ============================================================
 REM PREPARAR COMMIT
@@ -429,22 +573,19 @@ REM ============================================================
 set "LOCAL_BRANCH="
 for /f "delims=" %%B in ('git branch --show-current') do set "LOCAL_BRANCH=%%B"
 
-if not defined LOCAL_BRANCH (
-    git branch -M main
-    set "LOCAL_BRANCH=main"
-)
+if not defined LOCAL_BRANCH goto :git_error
 
 if /I "!LOCAL_BRANCH!"=="master" (
-    echo.
-    echo [INFO] Renombrando automaticamente master a main...
     git branch -M main
     if errorlevel 1 goto :git_error
     set "LOCAL_BRANCH=main"
 )
 
 echo.
-echo [INFO] Rama local: !LOCAL_BRANCH!
-echo [INFO] Actualizando referencias remotas...
+echo [INFO] Rama local para push:
+echo   !LOCAL_BRANCH!
+echo.
+
 git fetch origin --prune
 if errorlevel 1 echo [INFO] El remoto puede estar vacio. Continuando...
 
@@ -452,7 +593,6 @@ set "REMOTE_HAS_HEADS="
 for /f "delims=" %%R in ('git ls-remote --heads origin 2^>nul') do set "REMOTE_HAS_HEADS=1"
 
 if not defined REMOTE_HAS_HEADS (
-    echo.
     echo [INFO] Repositorio remoto vacio.
     git push -u origin "!LOCAL_BRANCH!"
     if errorlevel 1 goto :push_error
@@ -461,7 +601,6 @@ if not defined REMOTE_HAS_HEADS (
 
 git show-ref --verify --quiet "refs/remotes/origin/!LOCAL_BRANCH!"
 if errorlevel 1 (
-    echo.
     echo [INFO] La rama !LOCAL_BRANCH! no existe aun en GitHub.
     git push -u origin "!LOCAL_BRANCH!"
     if errorlevel 1 goto :push_error
@@ -470,7 +609,6 @@ if errorlevel 1 (
 
 git merge-base --is-ancestor "origin/!LOCAL_BRANCH!" HEAD >nul 2>&1
 if not errorlevel 1 (
-    echo.
     echo [INFO] Historial compatible. Haciendo push normal...
     git push -u origin "!LOCAL_BRANCH!"
     if errorlevel 1 goto :push_error
@@ -478,8 +616,14 @@ if not errorlevel 1 (
 )
 
 git merge-base --is-ancestor HEAD "origin/!LOCAL_BRANCH!" >nul 2>&1
-if not errorlevel 1 goto :safe_branch
+if not errorlevel 1 (
+    echo.
+    echo [AVISO] GitHub tiene commits que tu copia local no tiene.
+    goto :safe_branch
+)
 
+echo.
+echo [AVISO] Los historiales local y remoto son distintos o han divergido.
 goto :safe_branch
 
 REM ============================================================
@@ -491,7 +635,6 @@ echo ============================================================
 echo             SUBIDA SEGURA A RAMA NUEVA
 echo ============================================================
 echo.
-echo GitHub contiene un historial distinto o mas avanzado.
 echo No se utilizara force push.
 echo.
 
@@ -523,26 +666,36 @@ REM DETECTAR BACKUPS
 REM ============================================================
 :detect_backups
 set "HAS_BACKUPS="
+set "NEEDS_BACKUP_ACTION="
 set "BACKUP_LIST_FILE=%TEMP%\github_uploader_backups_%RANDOM%.txt"
 if exist "!BACKUP_LIST_FILE!" del /q "!BACKUP_LIST_FILE!" >nul 2>&1
 
-REM ZIP en raiz
 for %%F in (*.zip *.7z *.rar *.bak *.backup) do (
     if exist "%%F" (
         echo %%F>>"!BACKUP_LIST_FILE!"
         set "HAS_BACKUPS=1"
+
+        REM --no-index permite detectar ignore incluso si ya estaba trackeado.
+        git check-ignore --no-index -q "%%F" >nul 2>&1
+        if errorlevel 1 set "NEEDS_BACKUP_ACTION=1"
     )
 )
 
-REM Carpetas tipicas de versiones/backups
 for /d %%D in ("+Versiones" "Versiones" "versions" "backup" "backups" "Backup" "Backups") do (
     if exist "%%~D\" (
         echo %%~D/>>"!BACKUP_LIST_FILE!"
         set "HAS_BACKUPS=1"
+
+        git check-ignore --no-index -q "%%~D/" >nul 2>&1
+        if errorlevel 1 set "NEEDS_BACKUP_ACTION=1"
     )
 )
 
 if not defined HAS_BACKUPS exit /b 0
+if not defined NEEDS_BACKUP_ACTION (
+    if exist "!BACKUP_LIST_FILE!" del /q "!BACKUP_LIST_FILE!" >nul 2>&1
+    exit /b 0
+)
 
 echo.
 echo ============================================================
@@ -554,35 +707,55 @@ echo.
 echo Que quieres hacer?
 echo.
 echo   [1] Subirlos tambien a GitHub
-echo   [2] Ignorarlos y anadirlos a .gitignore
+echo   [2] Ignorarlos en Git y mantenerlos SOLO en tu PC
 echo   [3] No cambiar nada ahora
 echo.
 set /p BACKUP_ACTION=Elige [1/2/3]: 
 
 if "!BACKUP_ACTION!"=="2" (
-    if not exist ".gitignore" (
-        call :create_basic_gitignore
-    )
-    echo.>>".gitignore"
-    echo # Backups y versiones locales>>".gitignore"
+    if not exist ".gitignore" call :create_basic_gitignore
+
+    >>".gitignore" echo.
+    >>".gitignore" echo # Backups y versiones locales
 
     for %%F in (*.zip *.7z *.rar *.bak *.backup) do (
-        if exist "%%F" echo %%F>>".gitignore"
+        if exist "%%F" (
+            findstr /x /c:"%%F" ".gitignore" >nul 2>&1
+            if errorlevel 1 >>".gitignore" echo %%F
+
+            REM Si esta trackeado, quitar SOLO del indice.
+            git ls-files --error-unmatch "%%F" >nul 2>&1
+            if not errorlevel 1 (
+                echo [INFO] Quitando %%F del seguimiento Git sin borrarlo del disco...
+                git rm --cached -- "%%F"
+            )
+        )
     )
 
     for /d %%D in ("+Versiones" "Versiones" "versions" "backup" "backups" "Backup" "Backups") do (
-        if exist "%%~D\" echo %%~D/>>".gitignore"
+        if exist "%%~D\" (
+            findstr /x /c:"%%~D/" ".gitignore" >nul 2>&1
+            if errorlevel 1 >>".gitignore" echo %%~D/
+
+            REM Si contiene archivos trackeados, quitarlos SOLO del indice.
+            git ls-files "%%~D/" | findstr . >nul
+            if not errorlevel 1 (
+                echo [INFO] Quitando %%~D/ del seguimiento Git sin borrar archivos locales...
+                git rm -r --cached -- "%%~D/"
+            )
+        )
     )
 
     echo.
-    echo [OK] Backups/versiones anadidos a .gitignore.
+    echo [OK] Backups/versiones ignorados.
+    echo [OK] Los archivos siguen existiendo en tu PC.
 )
 
 if exist "!BACKUP_LIST_FILE!" del /q "!BACKUP_LIST_FILE!" >nul 2>&1
 exit /b 0
 
 REM ============================================================
-REM CREAR GITIGNORE BASICO
+REM CREAR GITIGNORE
 REM ============================================================
 :create_basic_gitignore
 >".gitignore" (
@@ -629,10 +802,11 @@ echo.
 echo Ultimo commit:
 git log -1 --oneline
 echo.
-echo La URL queda almacenada automaticamente en:
-echo   .git\config
+echo Objetivo normal:
+echo   rama main
 echo.
-echo La proxima vez solo ejecuta este BAT y elige [3].
+echo La URL sigue guardada en:
+echo   .git\config
 echo.
 pause
 exit /b 0
