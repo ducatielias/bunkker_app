@@ -1,25 +1,31 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-title GitHub Project Manager Universal v3
+title GitHub Project Manager Universal v4
 cls
 
 REM ============================================================
-REM GITHUB PROJECT MANAGER UNIVERSAL v3
+REM GITHUB PROJECT MANAGER UNIVERSAL v4
 REM Windows CMD compatible: ASCII + CRLF + no BOM
+REM
+REM Funciones:
+REM - Crear repositorio nuevo en GitHub (requiere GitHub CLI)
+REM - Conectar a repositorio existente
+REM - Actualizar origin recordado
+REM - Renombrar master -> main automaticamente
+REM - Detectar backups/ZIPs/versiones antes del primer commit
+REM - Opcion de ignorarlos en .gitignore
+REM - Nunca hace force push automaticamente
 REM ============================================================
 
 echo.
 echo ============================================================
-echo          GITHUB PROJECT MANAGER UNIVERSAL v3
+echo          GITHUB PROJECT MANAGER UNIVERSAL v4
 echo ============================================================
 echo.
 echo Carpeta actual:
 echo   %CD%
 echo.
 
-REM ------------------------------------------------------------
-REM 1. Comprobar Git
-REM ------------------------------------------------------------
 where git >nul 2>&1
 if errorlevel 1 (
     echo [ERROR] Git no esta instalado o no esta disponible en PATH.
@@ -34,9 +40,6 @@ for /f "delims=" %%G in ('git --version') do set "GIT_VERSION=%%G"
 echo [OK] !GIT_VERSION!
 echo.
 
-REM ------------------------------------------------------------
-REM 2. Confirmar carpeta
-REM ------------------------------------------------------------
 set /p CONFIRM=Esta es la carpeta raiz del proyecto? [S/N]: 
 if /I not "%CONFIRM%"=="S" (
     echo.
@@ -45,9 +48,6 @@ if /I not "%CONFIRM%"=="S" (
     exit /b 0
 )
 
-REM ------------------------------------------------------------
-REM 3. Inicializar Git si hace falta
-REM ------------------------------------------------------------
 if not exist ".git" (
     echo.
     echo [INFO] Inicializando repositorio Git local...
@@ -58,7 +58,21 @@ if not exist ".git" (
 )
 
 REM ------------------------------------------------------------
-REM 4. Identidad Git local del proyecto
+REM Asegurar main en repositorios nuevos/actuales
+REM ------------------------------------------------------------
+set "CURRENT_BRANCH="
+for /f "delims=" %%B in ('git branch --show-current 2^>nul') do set "CURRENT_BRANCH=%%B"
+
+if /I "!CURRENT_BRANCH!"=="master" (
+    echo.
+    echo [INFO] Renombrando automaticamente master a main...
+    git branch -M main
+    if errorlevel 1 goto :git_error
+    set "CURRENT_BRANCH=main"
+)
+
+REM ------------------------------------------------------------
+REM Identidad Git
 REM ------------------------------------------------------------
 set "GIT_NAME="
 set "GIT_EMAIL="
@@ -89,42 +103,24 @@ if not defined GIT_EMAIL (
 )
 
 REM ------------------------------------------------------------
-REM 5. Gitignore opcional
+REM Crear .gitignore opcional
 REM ------------------------------------------------------------
 if not exist ".gitignore" (
     echo.
     echo [INFO] Este proyecto no tiene .gitignore.
     set /p MAKEIGNORE=Crear un .gitignore basico? [S/N]: 
     if /I "!MAKEIGNORE!"=="S" (
-        >".gitignore" (
-            echo # Sistema
-            echo Thumbs.db
-            echo Desktop.ini
-            echo .DS_Store
-            echo.
-            echo # Editores
-            echo .vscode/
-            echo .idea/
-            echo.
-            echo # Dependencias y builds
-            echo node_modules/
-            echo dist/
-            echo build/
-            echo.
-            echo # Variables y secretos
-            echo .env
-            echo .env.*
-            echo ^!.env.example
-            echo.
-            echo # Logs
-            echo *.log
-        )
-        echo [OK] .gitignore creado.
+        call :create_basic_gitignore
     )
 )
 
 REM ------------------------------------------------------------
-REM 6. Detectar origin recordado
+REM Detectar backups/versiones/ZIPs
+REM ------------------------------------------------------------
+call :detect_backups
+
+REM ------------------------------------------------------------
+REM Detectar origin recordado
 REM ------------------------------------------------------------
 set "REMEMBERED_REMOTE="
 git remote get-url origin >nul 2>&1
@@ -166,7 +162,7 @@ pause
 exit /b 1
 
 REM ============================================================
-REM OPCION 1 - CREAR REPOSITORIO NUEVO EN GITHUB
+REM OPCION 1
 REM ============================================================
 :create_new
 echo.
@@ -179,11 +175,8 @@ where gh >nul 2>&1
 if errorlevel 1 (
     echo [ERROR] Para crear repositorios desde este BAT necesitas GitHub CLI.
     echo.
-    echo Puedes instalarla con:
-    echo.
+    echo Instalala con:
     echo   winget install --id GitHub.cli
-    echo.
-    echo Despues cierra esta ventana y vuelve a ejecutar el BAT.
     echo.
     pause
     exit /b 1
@@ -192,7 +185,7 @@ if errorlevel 1 (
 gh auth status >nul 2>&1
 if errorlevel 1 (
     echo [INFO] GitHub CLI no esta autenticado.
-    echo [INFO] Se abrira el proceso oficial de login.
+    echo [INFO] Se iniciara el login oficial.
     echo.
     gh auth login
     if errorlevel 1 (
@@ -202,9 +195,6 @@ if errorlevel 1 (
         exit /b 1
     )
 )
-
-echo [OK] GitHub CLI disponible y autenticado.
-echo.
 
 for %%I in ("%CD%") do set "DEFAULT_REPO=%%~nxI"
 
@@ -234,10 +224,10 @@ if errorlevel 1 exit /b 1
 
 if defined REMEMBERED_REMOTE (
     echo.
-    echo [AVISO] Este proyecto ya tiene un repositorio asociado:
+    echo [AVISO] Este proyecto ya tiene un origin:
     echo   !REMEMBERED_REMOTE!
     echo.
-    set /p REPLACE_ORIGIN=Desconectar ese origin y crear uno nuevo? [S/N]: 
+    set /p REPLACE_ORIGIN=Desconectarlo y crear uno nuevo? [S/N]: 
     if /I not "!REPLACE_ORIGIN!"=="S" (
         echo Operacion cancelada.
         pause
@@ -259,25 +249,16 @@ if defined DESCRIPTION (
 
 if errorlevel 1 (
     echo.
-    echo [ERROR] No se pudo crear el repositorio en GitHub.
-    echo Puede que ese nombre ya exista o que falten permisos.
-    echo.
+    echo [ERROR] No se pudo crear el repositorio.
     pause
     exit /b 1
 )
 
 for /f "delims=" %%R in ('git remote get-url origin') do set "REMEMBERED_REMOTE=%%R"
-
-echo.
-echo [OK] Repositorio creado correctamente.
-echo [OK] Git recordara automaticamente:
-echo   !REMEMBERED_REMOTE!
-echo.
-
 goto :safe_push_current
 
 REM ============================================================
-REM OPCION 2 - CONECTAR A REPOSITORIO EXISTENTE
+REM OPCION 2
 REM ============================================================
 :connect_existing
 echo.
@@ -322,16 +303,10 @@ if defined REMEMBERED_REMOTE (
 )
 
 set "REMEMBERED_REMOTE=!REMOTE_URL!"
-
-echo.
-echo [OK] URL guardada automaticamente en .git\config
-echo [OK] La proxima vez podras elegir la opcion [3].
-echo.
-
 goto :verify_and_update
 
 REM ============================================================
-REM OPCION 3 - USAR ORIGIN RECORDADO
+REM OPCION 3
 REM ============================================================
 :use_remembered
 if not defined REMEMBERED_REMOTE (
@@ -351,11 +326,10 @@ echo.
 echo Repositorio:
 echo   !REMEMBERED_REMOTE!
 echo.
-
 goto :verify_and_update
 
 REM ============================================================
-REM OPCION 4 - MOSTRAR CONFIGURACION
+REM OPCION 4
 REM ============================================================
 :show_config
 echo.
@@ -386,7 +360,7 @@ pause
 exit /b 0
 
 REM ============================================================
-REM VERIFICAR REMOTO + COMMIT + PUSH
+REM VERIFICAR Y ACTUALIZAR
 REM ============================================================
 :verify_and_update
 echo.
@@ -396,29 +370,23 @@ if errorlevel 1 (
     echo.
     echo [ERROR] No se pudo acceder al repositorio.
     echo.
-    echo Revisa:
-    echo   - Conexion a Internet
-    echo   - URL del repositorio
-    echo   - Permisos de GitHub
-    echo   - Autenticacion
+    echo Revisa conexion, URL, permisos y autenticacion.
     echo.
     pause
     exit /b 1
 )
 
 echo [OK] Repositorio remoto accesible.
-
 call :prepare_commit
 if errorlevel 1 exit /b 1
-
 goto :safe_push_current
 
 REM ============================================================
-REM SUBRUTINA - PREPARAR COMMIT
+REM PREPARAR COMMIT
 REM ============================================================
 :prepare_commit
 echo.
-echo [INFO] Revisando cambios del proyecto...
+echo [INFO] Revisando cambios...
 echo.
 git status --short
 echo.
@@ -448,7 +416,7 @@ if errorlevel 1 (
 git rev-parse HEAD >nul 2>&1
 if errorlevel 1 (
     echo.
-    echo [ERROR] Todavia no existe ningun commit para subir.
+    echo [ERROR] No existe ningun commit para subir.
     exit /b 1
 )
 
@@ -468,30 +436,24 @@ if not defined LOCAL_BRANCH (
 
 if /I "!LOCAL_BRANCH!"=="master" (
     echo.
-    set /p RENAME_MAIN=Renombrar rama master a main? [S/N]: 
-    if /I "!RENAME_MAIN!"=="S" (
-        git branch -M main
-        if errorlevel 1 goto :git_error
-        set "LOCAL_BRANCH=main"
-    )
+    echo [INFO] Renombrando automaticamente master a main...
+    git branch -M main
+    if errorlevel 1 goto :git_error
+    set "LOCAL_BRANCH=main"
 )
 
 echo.
 echo [INFO] Rama local: !LOCAL_BRANCH!
 echo [INFO] Actualizando referencias remotas...
-
 git fetch origin --prune
-if errorlevel 1 (
-    echo [INFO] El remoto puede estar vacio. Continuando...
-)
+if errorlevel 1 echo [INFO] El remoto puede estar vacio. Continuando...
 
 set "REMOTE_HAS_HEADS="
 for /f "delims=" %%R in ('git ls-remote --heads origin 2^>nul') do set "REMOTE_HAS_HEADS=1"
 
 if not defined REMOTE_HAS_HEADS (
     echo.
-    echo [INFO] El repositorio remoto esta vacio.
-    echo [INFO] Subiendo rama !LOCAL_BRANCH!...
+    echo [INFO] Repositorio remoto vacio.
     git push -u origin "!LOCAL_BRANCH!"
     if errorlevel 1 goto :push_error
     goto :success
@@ -500,8 +462,7 @@ if not defined REMOTE_HAS_HEADS (
 git show-ref --verify --quiet "refs/remotes/origin/!LOCAL_BRANCH!"
 if errorlevel 1 (
     echo.
-    echo [INFO] La rama !LOCAL_BRANCH! no existe todavia en GitHub.
-    echo [INFO] Subiendola...
+    echo [INFO] La rama !LOCAL_BRANCH! no existe aun en GitHub.
     git push -u origin "!LOCAL_BRANCH!"
     if errorlevel 1 goto :push_error
     goto :success
@@ -517,16 +478,8 @@ if not errorlevel 1 (
 )
 
 git merge-base --is-ancestor HEAD "origin/!LOCAL_BRANCH!" >nul 2>&1
-if not errorlevel 1 (
-    echo.
-    echo [AVISO] GitHub tiene commits que tu copia local no tiene.
-    echo [AVISO] No se sobrescribira la rama remota.
-    goto :safe_branch
-)
+if not errorlevel 1 goto :safe_branch
 
-echo.
-echo [AVISO] Los historiales local y remoto son distintos o han divergido.
-echo [AVISO] No se utilizara force push.
 goto :safe_branch
 
 REM ============================================================
@@ -538,8 +491,8 @@ echo ============================================================
 echo             SUBIDA SEGURA A RAMA NUEVA
 echo ============================================================
 echo.
-echo El repositorio remoto ya contiene un historial diferente.
-echo Para protegerlo se creara una rama nueva.
+echo GitHub contiene un historial distinto o mas avanzado.
+echo No se utilizara force push.
 echo.
 
 for /f %%T in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"') do set "STAMP=%%T"
@@ -548,7 +501,6 @@ set "UPLOAD_BRANCH=upload-!STAMP!"
 echo Nueva rama:
 echo   !UPLOAD_BRANCH!
 echo.
-
 set /p CONTINUE_SAFE=Continuar con la rama segura? [S/N]: 
 if /I not "!CONTINUE_SAFE!"=="S" (
     echo Operacion cancelada.
@@ -563,9 +515,101 @@ git push -u origin "!UPLOAD_BRANCH!"
 if errorlevel 1 goto :push_error
 
 echo.
-echo [OK] Proyecto subido en una rama nueva sin tocar la existente.
-echo [OK] Puedes crear un Pull Request desde GitHub.
+echo [OK] Proyecto subido sin tocar la rama existente.
 goto :success
+
+REM ============================================================
+REM DETECTAR BACKUPS
+REM ============================================================
+:detect_backups
+set "HAS_BACKUPS="
+set "BACKUP_LIST_FILE=%TEMP%\github_uploader_backups_%RANDOM%.txt"
+if exist "!BACKUP_LIST_FILE!" del /q "!BACKUP_LIST_FILE!" >nul 2>&1
+
+REM ZIP en raiz
+for %%F in (*.zip *.7z *.rar *.bak *.backup) do (
+    if exist "%%F" (
+        echo %%F>>"!BACKUP_LIST_FILE!"
+        set "HAS_BACKUPS=1"
+    )
+)
+
+REM Carpetas tipicas de versiones/backups
+for /d %%D in ("+Versiones" "Versiones" "versions" "backup" "backups" "Backup" "Backups") do (
+    if exist "%%~D\" (
+        echo %%~D/>>"!BACKUP_LIST_FILE!"
+        set "HAS_BACKUPS=1"
+    )
+)
+
+if not defined HAS_BACKUPS exit /b 0
+
+echo.
+echo ============================================================
+echo          BACKUPS / VERSIONES DETECTADOS
+echo ============================================================
+echo.
+type "!BACKUP_LIST_FILE!"
+echo.
+echo Que quieres hacer?
+echo.
+echo   [1] Subirlos tambien a GitHub
+echo   [2] Ignorarlos y anadirlos a .gitignore
+echo   [3] No cambiar nada ahora
+echo.
+set /p BACKUP_ACTION=Elige [1/2/3]: 
+
+if "!BACKUP_ACTION!"=="2" (
+    if not exist ".gitignore" (
+        call :create_basic_gitignore
+    )
+    echo.>>".gitignore"
+    echo # Backups y versiones locales>>".gitignore"
+
+    for %%F in (*.zip *.7z *.rar *.bak *.backup) do (
+        if exist "%%F" echo %%F>>".gitignore"
+    )
+
+    for /d %%D in ("+Versiones" "Versiones" "versions" "backup" "backups" "Backup" "Backups") do (
+        if exist "%%~D\" echo %%~D/>>".gitignore"
+    )
+
+    echo.
+    echo [OK] Backups/versiones anadidos a .gitignore.
+)
+
+if exist "!BACKUP_LIST_FILE!" del /q "!BACKUP_LIST_FILE!" >nul 2>&1
+exit /b 0
+
+REM ============================================================
+REM CREAR GITIGNORE BASICO
+REM ============================================================
+:create_basic_gitignore
+>".gitignore" (
+    echo # Sistema
+    echo Thumbs.db
+    echo Desktop.ini
+    echo .DS_Store
+    echo.
+    echo # Editores
+    echo .vscode/
+    echo .idea/
+    echo.
+    echo # Dependencias y builds
+    echo node_modules/
+    echo dist/
+    echo build/
+    echo.
+    echo # Variables y secretos
+    echo .env
+    echo .env.*
+    echo ^!.env.example
+    echo.
+    echo # Logs
+    echo *.log
+)
+echo [OK] .gitignore creado.
+exit /b 0
 
 REM ============================================================
 REM FINALES
@@ -588,8 +632,7 @@ echo.
 echo La URL queda almacenada automaticamente en:
 echo   .git\config
 echo.
-echo La proxima vez:
-echo   Ejecuta este BAT y elige [3] para actualizar.
+echo La proxima vez solo ejecuta este BAT y elige [3].
 echo.
 pause
 exit /b 0

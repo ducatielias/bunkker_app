@@ -19,3 +19,8 @@ build/
 
 # Logs
 *.log
+
+# Backups y versiones locales
+v000.zip
+v001.zip
++Versiones/
